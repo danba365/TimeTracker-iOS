@@ -15,6 +15,7 @@ class RealtimeAPIClient: NSObject, ObservableObject {
     @Published var voiceState: VoiceState = .idle
     @Published var lastTranscript = ""
     @Published var lastResponse = ""
+    private var isConversationActive = false
     
     // Callbacks
     var onSpeechStarted: (() -> Void)?
@@ -217,19 +218,22 @@ class RealtimeAPIClient: NSObject, ObservableObject {
     // MARK: - Audio Streaming
     
     func startConversation() {
+        isConversationActive = true
         if !isConnected {
             connect()
             // Wait for connection
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
                 self?.audioManager.startRecording()
+                self?.voiceState = .listening
             }
         } else {
             audioManager.startRecording()
+            voiceState = .listening
         }
-        voiceState = .listening
     }
     
     func stopConversation() {
+        isConversationActive = false
         audioManager.stopRecording()
         audioManager.clearAudioQueue()
         voiceState = .idle
@@ -329,6 +333,11 @@ class RealtimeAPIClient: NSObject, ObservableObject {
         case "response.audio.delta":
             if let delta = json["delta"] as? String,
                let audioData = Data(base64Encoded: delta) {
+                // Stop recording while AI is speaking to prevent echo feedback
+                if audioManager.isRecording {
+                    audioManager.stopRecording()
+                    print("⏸️ Paused recording (AI speaking)")
+                }
                 voiceState = .speaking
                 audioManager.queueAudio(audioData)
                 onResponseAudio?(audioData)
@@ -336,18 +345,36 @@ class RealtimeAPIClient: NSObject, ObservableObject {
             
         case "response.audio.done":
             print("🔊 Audio response complete")
+            // Resume recording after AI finishes speaking
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                guard let self = self, self.isConnected, self.isConversationActive else { return }
+                if !self.audioManager.isRecording && !self.audioManager.isPlaying {
+                    self.audioManager.startRecording()
+                    self.voiceState = .listening
+                    print("▶️ Resumed recording")
+                }
+            }
             
         case "response.function_call_arguments.done":
             handleFunctionCall(json)
             
         case "response.done":
             print("✅ Response complete")
-            voiceState = .listening
             onResponseComplete?()
             lastResponse = ""
             
-            // Refresh task data
-            Task {
+            // Resume recording after response is complete (with delay to let audio finish)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
+                guard let self = self, self.isConnected, self.isConversationActive else { return }
+                if !self.audioManager.isRecording {
+                    self.audioManager.startRecording()
+                    self.voiceState = .listening
+                    print("▶️ Resumed recording after response")
+                }
+            }
+            
+            // Refresh task data (don't await, do it in background)
+            Task.detached {
                 await TaskManager.shared.fetchTasks()
             }
             
