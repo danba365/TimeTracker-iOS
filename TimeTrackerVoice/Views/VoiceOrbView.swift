@@ -90,7 +90,7 @@ struct VoiceOrbView: View {
         .onAppear {
             startAnimations()
         }
-        .onChange(of: state) { _ in
+        .onChange(of: state) { oldValue, newValue in
             updateAnimations()
         }
     }

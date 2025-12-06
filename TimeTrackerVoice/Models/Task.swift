@@ -7,14 +7,17 @@ enum Priority: String, Codable, CaseIterable {
 }
 
 enum TaskStatus: String, Codable, CaseIterable {
-    case todo, in_progress, done, missed
+    case todo
+    case inProgress = "in_progress"
+    case done
+    case missed
 }
 
 enum TaskType: String, Codable {
     case task, reminder
 }
 
-struct Task: Identifiable, Codable {
+struct TaskItem: Identifiable, Codable {
     let id: String
     var title: String
     var description: String?
@@ -111,4 +114,3 @@ struct User: Codable {
         case createdAt = "created_at"
     }
 }
-

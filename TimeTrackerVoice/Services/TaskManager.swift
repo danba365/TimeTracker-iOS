@@ -5,7 +5,7 @@ import Combine
 class TaskManager: ObservableObject {
     static let shared = TaskManager()
     
-    @Published var tasks: [Task] = []
+    @Published var tasks: [TaskItem] = []
     @Published var categories: [Category] = []
     @Published var isLoading = false
     @Published var error: String?
@@ -39,7 +39,7 @@ class TaskManager: ObservableObject {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             
             let (data, _) = try await URLSession.shared.data(for: request)
-            tasks = try JSONDecoder().decode([Task].self, from: data)
+            tasks = try JSONDecoder().decode([TaskItem].self, from: data)
             print("✅ Fetched \(tasks.count) tasks")
         } catch {
             self.error = error.localizedDescription
@@ -67,7 +67,7 @@ class TaskManager: ObservableObject {
     
     // MARK: - Task Operations
     
-    func createTask(_ input: CreateTaskInput) async throws -> Task {
+    func createTask(_ input: CreateTaskInput) async throws -> TaskItem {
         guard let token = AuthManager.shared.getAccessToken() else {
             throw TaskError.notAuthenticated
         }
@@ -88,8 +88,8 @@ class TaskManager: ObservableObject {
             throw TaskError.createFailed
         }
         
-        let tasks = try JSONDecoder().decode([Task].self, from: data)
-        guard let newTask = tasks.first else {
+        let fetchedTasks = try JSONDecoder().decode([TaskItem].self, from: data)
+        guard let newTask = fetchedTasks.first else {
             throw TaskError.createFailed
         }
         
@@ -100,7 +100,7 @@ class TaskManager: ObservableObject {
         return newTask
     }
     
-    func updateTask(id: String, input: UpdateTaskInput) async throws -> Task {
+    func updateTask(id: String, input: UpdateTaskInput) async throws -> TaskItem {
         guard let token = AuthManager.shared.getAccessToken() else {
             throw TaskError.notAuthenticated
         }
@@ -121,8 +121,8 @@ class TaskManager: ObservableObject {
             throw TaskError.updateFailed
         }
         
-        let tasks = try JSONDecoder().decode([Task].self, from: data)
-        guard let updatedTask = tasks.first else {
+        let fetchedTasks = try JSONDecoder().decode([TaskItem].self, from: data)
+        guard let updatedTask = fetchedTasks.first else {
             throw TaskError.updateFailed
         }
         
@@ -157,18 +157,18 @@ class TaskManager: ObservableObject {
     
     // MARK: - Helpers
     
-    func getTodaysTasks() -> [Task] {
+    func getTodaysTasks() -> [TaskItem] {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         let today = formatter.string(from: Date())
         return tasks.filter { $0.date == today }
     }
     
-    func getTasksByDate(_ date: String) -> [Task] {
+    func getTasksByDate(_ date: String) -> [TaskItem] {
         return tasks.filter { $0.date == date }
     }
     
-    func getUpcomingTasks(days: Int = 7) -> [Task] {
+    func getUpcomingTasks(days: Int = 7) -> [TaskItem] {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         let today = Date()
@@ -183,7 +183,7 @@ class TaskManager: ObservableObject {
         return categories.first { $0.id == id }
     }
     
-    func findTask(byTitle title: String, date: String? = nil) -> Task? {
+    func findTask(byTitle title: String, date: String? = nil) -> TaskItem? {
         let matching = tasks.filter { 
             $0.title.lowercased().contains(title.lowercased())
         }
@@ -222,4 +222,3 @@ enum TaskError: LocalizedError {
         }
     }
 }
-
