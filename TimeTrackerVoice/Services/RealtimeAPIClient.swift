@@ -73,8 +73,13 @@ class RealtimeAPIClient: NSObject, ObservableObject {
     // MARK: - Session Configuration
     
     private func configureSession() {
-        let context = buildTaskContext()
-        
+        Task { @MainActor in
+            let context = buildTaskContext()
+            sendSessionConfig(context: context)
+        }
+    }
+    
+    private func sendSessionConfig(context: String) {
         let config: [String: Any] = [
             "type": "session.update",
             "session": [
@@ -114,6 +119,7 @@ class RealtimeAPIClient: NSObject, ObservableObject {
         sendMessage(config)
     }
     
+    @MainActor
     private func buildTaskContext() -> String {
         let taskManager = TaskManager.shared
         let formatter = DateFormatter()
