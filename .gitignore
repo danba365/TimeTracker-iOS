@@ -1,0 +1,67 @@
+# Xcode
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+*.xcworkspace
+!*.xcworkspace/contents.xcworkspacedata
+xcuserdata/
+*.xccheckout
+*.xcuserstate
+*.playground/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.wflow
+
+# Build
+build/
+DerivedData/
+*.build/
+*.ipa
+*.dSYM.zip
+*.dSYM
+*.o
+*.gcno
+*.gcda
+
+# Dependencies
+Carthage/
+Pods/
+*.resolved
+
+# Swift Package Manager
+.swiftpm/
+.build/
+Packages/
+Package.resolved
+
+# CocoaPods
+Podfile.lock
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# Code Injection
+iOSInjectionProject/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Environment
+.env
+.env.local
+
+# IDE
+.idea/
+*.swp
+*~
+

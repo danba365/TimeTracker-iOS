@@ -1,0 +1,374 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		265D0B7AEB713522D3281186 /* VoiceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CCDEEFF3DADEBCC51030F10 /* VoiceView.swift */; };
+		36F954BA5AECB2CE70EAD6AB /* RealtimeAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD736E1729DABA033318794D /* RealtimeAPIClient.swift */; };
+		69D99FBFA5CADD16244BD637 /* Task.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78439F0D6785C0874C264021 /* Task.swift */; };
+		916CE8AD66B97952C5DD5B4B /* VoiceOrbView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9591C4C54EC4F7124AE2508 /* VoiceOrbView.swift */; };
+		96F45E29A73F59EEBF2115DE /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B45E0C0F046463E901D90CF /* AuthView.swift */; };
+		9CB97603F3E33B4B06D82F5C /* AudioStreamManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53EA97FB722407D2230B4B9C /* AudioStreamManager.swift */; };
+		B2B3EA9ED52CA3BB433347F8 /* TaskManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E864E346ACAB89104F342E9F /* TaskManager.swift */; };
+		CDC44DD0190828061EA22FDA /* TimeTrackerVoiceApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8C3C8D017C28EC1FC41A04C /* TimeTrackerVoiceApp.swift */; };
+		D3CE25E03C1A76C43FE3D1EB /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D3FD0263B3A11FBBA221B23 /* AuthManager.swift */; };
+		F282E300B5FF7CE32442566A /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00D5D11E54C27CCBA0960448 /* Config.swift */; };
+		F4C589B73616A8B5BC529A98 /* VoiceState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5EAE457C9906B6A456D2D48 /* VoiceState.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		00D5D11E54C27CCBA0960448 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
+		2D3FD0263B3A11FBBA221B23 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
+		4B45E0C0F046463E901D90CF /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
+		53EA97FB722407D2230B4B9C /* AudioStreamManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioStreamManager.swift; sourceTree = "<group>"; };
+		75BE21884DDAC8E10F4EDFCB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		78439F0D6785C0874C264021 /* Task.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Task.swift; sourceTree = "<group>"; };
+		8CCDEEFF3DADEBCC51030F10 /* VoiceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceView.swift; sourceTree = "<group>"; };
+		B9591C4C54EC4F7124AE2508 /* VoiceOrbView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceOrbView.swift; sourceTree = "<group>"; };
+		BD736E1729DABA033318794D /* RealtimeAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeAPIClient.swift; sourceTree = "<group>"; };
+		CC05BCE24353DA1B7E0F2DD0 /* TimeTrackerVoice.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TimeTrackerVoice.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D8C3C8D017C28EC1FC41A04C /* TimeTrackerVoiceApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeTrackerVoiceApp.swift; sourceTree = "<group>"; };
+		E5EAE457C9906B6A456D2D48 /* VoiceState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceState.swift; sourceTree = "<group>"; };
+		E864E346ACAB89104F342E9F /* TaskManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskManager.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		0C79994C598EEACFFCB66D0E /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				75BE21884DDAC8E10F4EDFCB /* Info.plist */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		5AA6258DB03BF3650CCCE655 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				CC05BCE24353DA1B7E0F2DD0 /* TimeTrackerVoice.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		72A92B44F4E012EAC85632D9 /* TimeTrackerVoice */ = {
+			isa = PBXGroup;
+			children = (
+				9B514840E95DD22F84C2DA7D /* App */,
+				8A5DFE08CEF31543ECEEE00B /* Models */,
+				0C79994C598EEACFFCB66D0E /* Resources */,
+				981D463D35D306F27EF28DEC /* Services */,
+				779EE6FC4E2B903F0FCE5759 /* Views */,
+			);
+			path = TimeTrackerVoice;
+			sourceTree = "<group>";
+		};
+		779EE6FC4E2B903F0FCE5759 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				4B45E0C0F046463E901D90CF /* AuthView.swift */,
+				B9591C4C54EC4F7124AE2508 /* VoiceOrbView.swift */,
+				8CCDEEFF3DADEBCC51030F10 /* VoiceView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		8A5DFE08CEF31543ECEEE00B /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				78439F0D6785C0874C264021 /* Task.swift */,
+				E5EAE457C9906B6A456D2D48 /* VoiceState.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		981D463D35D306F27EF28DEC /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				53EA97FB722407D2230B4B9C /* AudioStreamManager.swift */,
+				2D3FD0263B3A11FBBA221B23 /* AuthManager.swift */,
+				BD736E1729DABA033318794D /* RealtimeAPIClient.swift */,
+				E864E346ACAB89104F342E9F /* TaskManager.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		9B514840E95DD22F84C2DA7D /* App */ = {
+			isa = PBXGroup;
+			children = (
+				00D5D11E54C27CCBA0960448 /* Config.swift */,
+				D8C3C8D017C28EC1FC41A04C /* TimeTrackerVoiceApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		DDF633EC137B14601D51A512 = {
+			isa = PBXGroup;
+			children = (
+				72A92B44F4E012EAC85632D9 /* TimeTrackerVoice */,
+				5AA6258DB03BF3650CCCE655 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		1C8B1DDA81592BF79253736C /* TimeTrackerVoice */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 91AD3A174ED437F654301431 /* Build configuration list for PBXNativeTarget "TimeTrackerVoice" */;
+			buildPhases = (
+				7996794FAB99A0374899081B /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TimeTrackerVoice;
+			packageProductDependencies = (
+			);
+			productName = TimeTrackerVoice;
+			productReference = CC05BCE24353DA1B7E0F2DD0 /* TimeTrackerVoice.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		4672470FBF7026C0964196CC /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					1C8B1DDA81592BF79253736C = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 1FEF6E139E6DBFF7DB084F98 /* Build configuration list for PBXProject "TimeTrackerVoice" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = DDF633EC137B14601D51A512;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				1C8B1DDA81592BF79253736C /* TimeTrackerVoice */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		7996794FAB99A0374899081B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9CB97603F3E33B4B06D82F5C /* AudioStreamManager.swift in Sources */,
+				D3CE25E03C1A76C43FE3D1EB /* AuthManager.swift in Sources */,
+				96F45E29A73F59EEBF2115DE /* AuthView.swift in Sources */,
+				F282E300B5FF7CE32442566A /* Config.swift in Sources */,
+				36F954BA5AECB2CE70EAD6AB /* RealtimeAPIClient.swift in Sources */,
+				69D99FBFA5CADD16244BD637 /* Task.swift in Sources */,
+				B2B3EA9ED52CA3BB433347F8 /* TaskManager.swift in Sources */,
+				CDC44DD0190828061EA22FDA /* TimeTrackerVoiceApp.swift in Sources */,
+				916CE8AD66B97952C5DD5B4B /* VoiceOrbView.swift in Sources */,
+				F4C589B73616A8B5BC529A98 /* VoiceState.swift in Sources */,
+				265D0B7AEB713522D3281186 /* VoiceView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		4FE9E3A57849FF78C6B8305F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_ASSET_PATHS = "";
+				INFOPLIST_FILE = TimeTrackerVoice/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.timetracker.voice;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		7A5FACE92924124813C8B739 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
+		A2908F10F163678492B41E44 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
+		B76659D4A88B4BD5B7EE7AB1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_ASSET_PATHS = "";
+				INFOPLIST_FILE = TimeTrackerVoice/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.timetracker.voice;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1FEF6E139E6DBFF7DB084F98 /* Build configuration list for PBXProject "TimeTrackerVoice" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A2908F10F163678492B41E44 /* Debug */,
+				7A5FACE92924124813C8B739 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		91AD3A174ED437F654301431 /* Build configuration list for PBXNativeTarget "TimeTrackerVoice" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B76659D4A88B4BD5B7EE7AB1 /* Debug */,
+				4FE9E3A57849FF78C6B8305F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 4672470FBF7026C0964196CC /* Project object */;
+}
