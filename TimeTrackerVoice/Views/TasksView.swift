@@ -5,6 +5,7 @@ struct TasksView: View {
     @EnvironmentObject var taskManager: TaskManager
     @State private var selectedDate = Date()
     @State private var showingAddTask = false
+    @GestureState private var dragOffset: CGFloat = 0
     
     private let calendar = Calendar.current
     
@@ -26,10 +27,10 @@ struct TasksView: View {
                 // Header
                 headerView
                 
-                // Week selector
+                // Week selector (swipeable)
                 weekSelectorView
                 
-                // Tasks list
+                // Tasks list with swipe gesture
                 if taskManager.isLoading {
                     Spacer()
                     ProgressView()
@@ -37,6 +38,26 @@ struct TasksView: View {
                     Spacer()
                 } else {
                     tasksListView
+                        .gesture(
+                            DragGesture()
+                                .updating($dragOffset) { value, state, _ in
+                                    state = value.translation.width
+                                }
+                                .onEnded { value in
+                                    let threshold: CGFloat = 50
+                                    if value.translation.width > threshold {
+                                        // Swipe right - go to previous day
+                                        withAnimation {
+                                            selectedDate = calendar.date(byAdding: .day, value: -1, to: selectedDate) ?? selectedDate
+                                        }
+                                    } else if value.translation.width < -threshold {
+                                        // Swipe left - go to next day
+                                        withAnimation {
+                                            selectedDate = calendar.date(byAdding: .day, value: 1, to: selectedDate) ?? selectedDate
+                                        }
+                                    }
+                                }
+                        )
                 }
             }
         }
@@ -51,52 +72,133 @@ struct TasksView: View {
     
     private var headerView: some View {
         HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("My Tasks")
-                    .font(.system(size: 28, weight: .bold))
+            // Previous day button
+            Button(action: {
+                withAnimation {
+                    selectedDate = calendar.date(byAdding: .day, value: -1, to: selectedDate) ?? selectedDate
+                }
+            }) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(Color(hex: "a78bfa"))
+            }
+            
+            Spacer()
+            
+            VStack(alignment: .center, spacing: 4) {
+                Text(formattedDayName)
+                    .font(.system(size: 24, weight: .bold))
                     .foregroundColor(.white)
-                Text(selectedDate.formatted(.dateTime.month().year()))
-                    .font(.system(size: 16))
+                Text(formattedFullDate)
+                    .font(.system(size: 14))
                     .foregroundColor(Color(hex: "94a3b8"))
             }
             
             Spacer()
             
-            Button(action: { selectedDate = Date() }) {
-                Text("Today")
-                    .font(.system(size: 14, weight: .semibold))
+            // Next day button
+            Button(action: {
+                withAnimation {
+                    selectedDate = calendar.date(byAdding: .day, value: 1, to: selectedDate) ?? selectedDate
+                }
+            }) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 20, weight: .semibold))
                     .foregroundColor(Color(hex: "a78bfa"))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color(hex: "a78bfa").opacity(0.2))
-                    .cornerRadius(8)
             }
         }
         .padding(.horizontal, 20)
         .padding(.top, 20)
         .padding(.bottom, 16)
+        .overlay(alignment: .topTrailing) {
+            // Today button
+            if !calendar.isDateInToday(selectedDate) {
+                Button(action: { 
+                    withAnimation {
+                        selectedDate = Date()
+                    }
+                }) {
+                    Text("היום / Today")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(Color(hex: "a78bfa"))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Color(hex: "a78bfa").opacity(0.2))
+                        .cornerRadius(6)
+                }
+                .padding(.top, 16)
+                .padding(.trailing, 20)
+            }
+        }
     }
     
-    // MARK: - Week Selector
+    private var formattedDayName: String {
+        if calendar.isDateInToday(selectedDate) {
+            return "היום / Today"
+        } else if calendar.isDateInYesterday(selectedDate) {
+            return "אתמול / Yesterday"
+        } else if calendar.isDateInTomorrow(selectedDate) {
+            return "מחר / Tomorrow"
+        } else {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "EEEE"
+            return formatter.string(from: selectedDate)
+        }
+    }
+    
+    private var formattedFullDate: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "d MMMM yyyy"
+        return formatter.string(from: selectedDate)
+    }
+    
+    // MARK: - Week Selector (Infinite Scroll)
     
     private var weekSelectorView: some View {
-        let weekDays = getWeekDays(for: selectedDate)
+        // Show 3 weeks: previous, current, next (centered on selected date)
+        let allDays = getExtendedDays(for: selectedDate, range: 21) // 3 weeks
         
-        return ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(weekDays, id: \.self) { date in
-                    DayButton(
-                        date: date,
-                        isSelected: calendar.isDate(date, inSameDayAs: selectedDate),
-                        hasTask: hasTasksOnDate(date)
-                    ) {
-                        selectedDate = date
+        return ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(allDays, id: \.self) { date in
+                        DayButton(
+                            date: date,
+                            isSelected: calendar.isDate(date, inSameDayAs: selectedDate),
+                            hasTask: hasTasksOnDate(date)
+                        ) {
+                            withAnimation {
+                                selectedDate = date
+                            }
+                        }
+                        .id(date)
                     }
                 }
+                .padding(.horizontal, 20)
             }
-            .padding(.horizontal, 20)
+            .onAppear {
+                // Scroll to selected date
+                proxy.scrollTo(selectedDate, anchor: .center)
+            }
+            .onChange(of: selectedDate) { _, newDate in
+                withAnimation {
+                    proxy.scrollTo(newDate, anchor: .center)
+                }
+            }
         }
         .padding(.bottom, 16)
+    }
+    
+    private func getExtendedDays(for date: Date, range: Int) -> [Date] {
+        var days: [Date] = []
+        let halfRange = range / 2
+        
+        for i in -halfRange...halfRange {
+            if let day = calendar.date(byAdding: .day, value: i, to: date) {
+                days.append(day)
+            }
+        }
+        return days
     }
     
     // MARK: - Tasks List
@@ -127,11 +229,15 @@ struct TasksView: View {
                 .font(.system(size: 50))
                 .foregroundColor(Color(hex: "475569"))
             
-            Text("No tasks for this day")
+            Text("אין משימות ליום זה")
                 .font(.system(size: 18, weight: .medium))
                 .foregroundColor(Color(hex: "64748b"))
             
-            Text("Use the voice or chat to add tasks")
+            Text("No tasks for this day")
+                .font(.system(size: 16))
+                .foregroundColor(Color(hex: "64748b"))
+            
+            Text("השתמש בקול או בצ'אט להוספת משימות")
                 .font(.system(size: 14))
                 .foregroundColor(Color(hex: "475569"))
         }

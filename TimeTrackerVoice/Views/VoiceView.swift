@@ -98,21 +98,21 @@ struct VoiceView: View {
                 Text("TimeTracker")
                     .font(.system(size: 28, weight: .bold))
                     .foregroundColor(.white)
-                Text("Voice Coach")
-                    .font(.system(size: 16, weight: .medium))
+                Text("עוזר קולי / Voice Coach")
+                    .font(.system(size: 14, weight: .medium))
                     .foregroundColor(Color(hex: "a78bfa"))
             }
             
             Spacer()
             
             Menu {
-                Button("Settings") {
+                Button("הגדרות / Settings") {
                     showingSettings = true
                 }
-                Button("Set API Key") {
+                Button("הגדר API Key") {
                     showingAPIKeyAlert = true
                 }
-                Button("Sign Out", role: .destructive) {
+                Button("התנתק / Sign Out", role: .destructive) {
                     authManager.signOut()
                 }
             } label: {
@@ -127,21 +127,21 @@ struct VoiceView: View {
     
     private var tipsView: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(isConversationActive ? "🎙️ Speak naturally" : "💡 Try saying:")
+            Text(isConversationActive ? "🎙️ דבר באופן טבעי" : "💡 נסה לומר:")
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(Color(hex: "64748b"))
             
             if isConversationActive {
-                Text("The AI will respond when you pause speaking")
+                Text("הבינה המלאכותית תגיב כשתפסיק לדבר")
                     .font(.system(size: 14))
                     .foregroundColor(Color(hex: "475569"))
             } else {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("• \"What's on my schedule today?\"")
-                    Text("• \"What did I do yesterday?\"")
-                    Text("• \"Add gym tomorrow at 7am\"")
-                    Text("• \"How many contacts do I have?\"")
-                    Text("• \"Add mom to my contacts\"")
+                    Text("• \"מה יש לי היום?\"")
+                    Text("• \"מה עשיתי אתמול?\"")
+                    Text("• \"הוסף חדר כושר מחר ב-7 בבוקר\"")
+                    Text("• \"כמה אנשי קשר יש לי?\"")
+                    Text("• \"הוסף את אמא לאנשי הקשר\"")
                 }
                 .font(.system(size: 14))
                 .foregroundColor(Color(hex: "475569"))

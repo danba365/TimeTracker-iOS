@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Text-based AI chat view
+/// Text-based AI chat view with Hebrew RTL support
 struct ChatView: View {
     @EnvironmentObject var taskManager: TaskManager
     @StateObject private var chatManager = ChatManager()
@@ -9,6 +9,13 @@ struct ChatView: View {
     @State private var showingAPIKeyAlert = false
     @State private var apiKeyInput = ""
     @FocusState private var isInputFocused: Bool
+    
+    // Detect if text is RTL (Hebrew/Arabic)
+    private var isRTL: Bool {
+        guard let firstChar = messageText.first else { return false }
+        let language = CFStringTokenizerCopyBestStringLanguage(messageText as CFString, CFRange(location: 0, length: messageText.count))
+        return language as String? == "he" || language as String? == "ar" || firstChar.isHebrewOrArabic
+    }
     
     var body: some View {
         ZStack {
@@ -54,10 +61,10 @@ struct ChatView: View {
     private var headerView: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text("AI Assistant")
-                    .font(.system(size: 28, weight: .bold))
+                Text("עוזר AI / AI Assistant")
+                    .font(.system(size: 24, weight: .bold))
                     .foregroundColor(.white)
-                Text("Ask me about your tasks")
+                Text("שאל אותי על המשימות שלך")
                     .font(.system(size: 14))
                     .foregroundColor(Color(hex: "94a3b8"))
             }
@@ -65,10 +72,10 @@ struct ChatView: View {
             Spacer()
             
             Menu {
-                Button("Set API Key") {
+                Button("הגדר API Key") {
                     showingAPIKeyAlert = true
                 }
-                Button("Clear Chat", role: .destructive) {
+                Button("נקה צ'אט", role: .destructive) {
                     chatManager.clearMessages()
                 }
             } label: {
@@ -124,19 +131,32 @@ struct ChatView: View {
                 .font(.system(size: 50))
                 .foregroundColor(Color(hex: "a78bfa"))
             
-            Text("How can I help you?")
+            Text("איך אפשר לעזור? / How can I help?")
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundColor(.white)
             
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .center, spacing: 12) {
+                // Hebrew suggestions
+                SuggestionButton(text: "מה יש לי היום?") {
+                    sendMessage("מה יש לי היום?")
+                }
+                SuggestionButton(text: "הוסף פגישה מחר ב-10 בבוקר") {
+                    sendMessage("הוסף פגישה מחר ב-10 בבוקר")
+                }
+                SuggestionButton(text: "מה המשימות הדחופות שלי?") {
+                    sendMessage("מה המשימות הדחופות שלי?")
+                }
+                
+                // Divider
+                Text("—")
+                    .foregroundColor(Color(hex: "64748b"))
+                
+                // English suggestions
                 SuggestionButton(text: "What's on my schedule today?") {
                     sendMessage("What's on my schedule today?")
                 }
                 SuggestionButton(text: "Add a meeting tomorrow at 10am") {
                     sendMessage("Add a meeting tomorrow at 10am")
-                }
-                SuggestionButton(text: "Show me my high priority tasks") {
-                    sendMessage("Show me my high priority tasks")
                 }
             }
         }
@@ -147,9 +167,11 @@ struct ChatView: View {
     
     private var inputView: some View {
         HStack(spacing: 12) {
-            TextField("Type a message...", text: $messageText)
+            TextField("הקלד הודעה... / Type a message...", text: $messageText)
                 .textFieldStyle(ChatTextFieldStyle())
                 .focused($isInputFocused)
+                .multilineTextAlignment(isRTL ? .trailing : .leading)
+                .environment(\.layoutDirection, isRTL ? .rightToLeft : .leftToRight)
                 .onSubmit {
                     sendCurrentMessage()
                 }
@@ -320,6 +342,13 @@ struct ChatMessage: Identifiable {
 struct MessageBubble: View {
     let message: ChatMessage
     
+    // Detect if message content is RTL (Hebrew/Arabic)
+    private var isRTL: Bool {
+        guard let firstChar = message.content.first else { return false }
+        let language = CFStringTokenizerCopyBestStringLanguage(message.content as CFString, CFRange(location: 0, length: message.content.count))
+        return language as String? == "he" || language as String? == "ar" || firstChar.isHebrewOrArabic
+    }
+    
     var body: some View {
         HStack {
             if message.role == .user { Spacer() }
@@ -327,6 +356,8 @@ struct MessageBubble: View {
             Text(message.content)
                 .font(.system(size: 15))
                 .foregroundColor(message.role == .user ? .white : Color(hex: "e2e8f0"))
+                .multilineTextAlignment(isRTL ? .trailing : .leading)
+                .environment(\.layoutDirection, isRTL ? .rightToLeft : .leftToRight)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 .background(
@@ -396,6 +427,17 @@ struct ChatTextFieldStyle: TextFieldStyle {
             .background(Color.white.opacity(0.08))
             .cornerRadius(20)
             .foregroundColor(.white)
+    }
+}
+
+// MARK: - Character Extension for RTL Detection
+
+extension Character {
+    var isHebrewOrArabic: Bool {
+        guard let scalar = unicodeScalars.first else { return false }
+        let value = scalar.value
+        // Hebrew: 0x0590–0x05FF, Arabic: 0x0600–0x06FF
+        return (value >= 0x0590 && value <= 0x05FF) || (value >= 0x0600 && value <= 0x06FF)
     }
 }
 
