@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Authentication view with email/password login
+/// Authentication view with Google Sign-In and email/password login
 struct AuthView: View {
     @EnvironmentObject var authManager: AuthManager
     
@@ -9,7 +9,8 @@ struct AuthView: View {
     @State private var isSignUp = false
     @State private var showError = false
     @State private var errorMessage = ""
-    @State private var magicLinkSent = false
+    @State private var showGoogleClientIDAlert = false
+    @State private var googleClientIDInput = ""
     
     var body: some View {
         ZStack {
@@ -48,29 +49,52 @@ struct AuthView: View {
                     }
                     .padding(.top, 60)
                     
-                    // Magic link sent message
-                    if magicLinkSent {
-                        VStack(spacing: 8) {
-                            Image(systemName: "envelope.badge.fill")
-                                .font(.system(size: 40))
-                                .foregroundColor(Color(hex: "10b981"))
-                            
-                            Text("Check your email!")
-                                .font(.headline)
-                                .foregroundColor(Color(hex: "10b981"))
-                            
-                            Text("We sent a login link to \(email)")
-                                .font(.subheadline)
-                                .foregroundColor(Color(hex: "6ee7b7"))
-                                .multilineTextAlignment(.center)
+                    // Google Sign-In Button
+                    VStack(spacing: 16) {
+                        Button(action: signInWithGoogle) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "g.circle.fill")
+                                    .font(.system(size: 22))
+                                Text("Continue with Google")
+                                    .font(.system(size: 16, weight: .semibold))
+                            }
+                            .foregroundColor(.black)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(Color.white)
+                            .cornerRadius(12)
                         }
-                        .padding()
-                        .background(Color(hex: "10b981").opacity(0.2))
-                        .cornerRadius(12)
-                        .padding(.horizontal, 30)
+                        .disabled(authManager.isLoading)
+                        
+                        // Configure Google Client ID button (if not set)
+                        if Config.googleClientID.isEmpty {
+                            Button(action: { showGoogleClientIDAlert = true }) {
+                                HStack {
+                                    Image(systemName: "gearshape")
+                                    Text("Configure Google Sign-In")
+                                }
+                                .font(.system(size: 14))
+                                .foregroundColor(Color(hex: "f59e0b"))
+                            }
+                        }
                     }
+                    .padding(.horizontal, 30)
                     
-                    // Form
+                    // Divider
+                    HStack {
+                        Rectangle()
+                            .fill(Color.white.opacity(0.2))
+                            .frame(height: 1)
+                        Text("or sign in with email")
+                            .font(.system(size: 14))
+                            .foregroundColor(Color(hex: "64748b"))
+                        Rectangle()
+                            .fill(Color.white.opacity(0.2))
+                            .frame(height: 1)
+                    }
+                    .padding(.horizontal, 30)
+                    
+                    // Email/Password Form
                     VStack(spacing: 20) {
                         // Email field
                         VStack(alignment: .leading, spacing: 8) {
@@ -95,41 +119,13 @@ struct AuthView: View {
                                 .textFieldStyle(CustomTextFieldStyle())
                         }
                         
-                        // Magic Link button
-                        Button(action: sendMagicLink) {
-                            HStack {
-                                Image(systemName: "envelope.fill")
-                                Text("Sign in with Email Link")
-                            }
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(Color(hex: "10b981"))
-                            .cornerRadius(12)
-                        }
-                        .disabled(authManager.isLoading)
-                        
-                        // Divider
-                        HStack {
-                            Rectangle()
-                                .fill(Color.white.opacity(0.2))
-                                .frame(height: 1)
-                            Text("or with password")
-                                .font(.system(size: 14))
-                                .foregroundColor(Color(hex: "64748b"))
-                            Rectangle()
-                                .fill(Color.white.opacity(0.2))
-                                .frame(height: 1)
-                        }
-                        
                         // Sign In button
                         Button(action: signIn) {
                             if authManager.isLoading {
                                 ProgressView()
                                     .progressViewStyle(CircularProgressViewStyle(tint: .white))
                             } else {
-                                Text(isSignUp ? "Create Account" : "Sign In with Password")
+                                Text(isSignUp ? "Create Account" : "Sign In")
                                     .font(.system(size: 16, weight: .semibold))
                             }
                         }
@@ -164,9 +160,29 @@ struct AuthView: View {
         } message: {
             Text(errorMessage)
         }
+        .alert("Google Client ID", isPresented: $showGoogleClientIDAlert) {
+            TextField("Client ID", text: $googleClientIDInput)
+            Button("Save") {
+                Config.setGoogleClientID(googleClientIDInput)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Enter your Google OAuth Client ID from Google Cloud Console (iOS client)")
+        }
     }
     
     // MARK: - Actions
+    
+    private func signInWithGoogle() {
+        Task {
+            do {
+                try await authManager.signInWithGoogle()
+            } catch {
+                errorMessage = error.localizedDescription
+                showError = true
+            }
+        }
+    }
     
     private func signIn() {
         guard !email.isEmpty, !password.isEmpty else {
@@ -178,24 +194,6 @@ struct AuthView: View {
         Task {
             do {
                 try await authManager.signIn(email: email, password: password)
-            } catch {
-                errorMessage = error.localizedDescription
-                showError = true
-            }
-        }
-    }
-    
-    private func sendMagicLink() {
-        guard !email.isEmpty else {
-            errorMessage = "Please enter your email"
-            showError = true
-            return
-        }
-        
-        Task {
-            do {
-                try await authManager.signInWithMagicLink(email: email)
-                magicLinkSent = true
             } catch {
                 errorMessage = error.localizedDescription
                 showError = true
@@ -225,4 +223,3 @@ struct CustomTextFieldStyle: TextFieldStyle {
     AuthView()
         .environmentObject(AuthManager.shared)
 }
-

@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import GoogleSignIn
 
 @MainActor
 class AuthManager: ObservableObject {
@@ -15,6 +16,18 @@ class AuthManager: ObservableObject {
     
     private init() {
         loadStoredSession()
+        configureGoogleSignIn()
+    }
+    
+    // MARK: - Google Sign-In Configuration
+    
+    private func configureGoogleSignIn() {
+        // Google Sign-In configuration is handled via Info.plist GIDClientID
+        // or can be set programmatically here
+        if !Config.googleClientID.isEmpty {
+            let config = GIDConfiguration(clientID: Config.googleClientID)
+            GIDSignIn.sharedInstance.configuration = config
+        }
     }
     
     // MARK: - Session Management
@@ -51,9 +64,94 @@ class AuthManager: ObservableObject {
         UserDefaults.standard.removeObject(forKey: "refresh_token")
         UserDefaults.standard.removeObject(forKey: "user_id")
         UserDefaults.standard.removeObject(forKey: "user_email")
+        
+        // Sign out of Google
+        GIDSignIn.sharedInstance.signOut()
     }
     
-    // MARK: - Authentication
+    // MARK: - Google Sign-In
+    
+    func signInWithGoogle() async throws {
+        isLoading = true
+        error = nil
+        
+        defer { isLoading = false }
+        
+        // Check if Google Client ID is configured
+        guard !Config.googleClientID.isEmpty else {
+            throw AuthError.serverError("Google Client ID not configured. Please set it in Settings.")
+        }
+        
+        // Get the presenting view controller
+        guard let windowScene = await UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let rootViewController = await windowScene.windows.first?.rootViewController else {
+            throw AuthError.serverError("Could not get root view controller")
+        }
+        
+        // Perform Google Sign-In
+        let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: rootViewController)
+        
+        guard let idToken = result.user.idToken?.tokenString else {
+            throw AuthError.serverError("Failed to get ID token from Google")
+        }
+        
+        // Exchange Google ID token with Supabase
+        try await exchangeGoogleTokenWithSupabase(idToken: idToken)
+        
+        print("✅ Signed in with Google: \(result.user.profile?.email ?? "unknown")")
+    }
+    
+    private func exchangeGoogleTokenWithSupabase(idToken: String) async throws {
+        let url = URL(string: "\(Config.supabaseURL)/auth/v1/token?grant_type=id_token")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        
+        let body: [String: Any] = [
+            "provider": "google",
+            "id_token": idToken
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw AuthError.invalidResponse
+        }
+        
+        if httpResponse.statusCode != 200 {
+            if let errorResponse = try? JSONDecoder().decode(SupabaseError.self, from: data) {
+                throw AuthError.serverError(errorResponse.message ?? errorResponse.error ?? "Google sign-in failed")
+            }
+            // Print the actual error for debugging
+            if let errorString = String(data: data, encoding: .utf8) {
+                print("❌ Supabase error: \(errorString)")
+            }
+            throw AuthError.serverError("Google sign-in failed")
+        }
+        
+        let authResponse = try JSONDecoder().decode(AuthResponse.self, from: data)
+        
+        let user = User(
+            id: authResponse.user.id,
+            email: authResponse.user.email ?? "unknown",
+            createdAt: authResponse.user.createdAt
+        )
+        
+        saveSession(
+            accessToken: authResponse.accessToken,
+            refreshToken: authResponse.refreshToken,
+            user: user
+        )
+    }
+    
+    // Handle Google Sign-In URL callback
+    func handleGoogleSignInURL(_ url: URL) -> Bool {
+        return GIDSignIn.sharedInstance.handle(url)
+    }
+    
+    // MARK: - Email/Password Authentication
     
     func signIn(email: String, password: String) async throws {
         isLoading = true
@@ -103,40 +201,6 @@ class AuthManager: ObservableObject {
         print("✅ Signed in as: \(email)")
     }
     
-    func signInWithMagicLink(email: String) async throws {
-        isLoading = true
-        error = nil
-        
-        defer { isLoading = false }
-        
-        let url = URL(string: "\(Config.supabaseURL)/auth/v1/otp")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
-        
-        let body: [String: Any] = [
-            "email": email,
-            "create_user": false
-        ]
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw AuthError.invalidResponse
-        }
-        
-        if httpResponse.statusCode != 200 {
-            if let errorResponse = try? JSONDecoder().decode(SupabaseError.self, from: data) {
-                throw AuthError.serverError(errorResponse.message ?? "Failed to send magic link")
-            }
-            throw AuthError.serverError("Failed to send magic link")
-        }
-        
-        print("✅ Magic link sent to: \(email)")
-    }
-    
     func signOut() {
         clearSession()
         print("✅ Signed out")
@@ -175,6 +239,12 @@ struct AuthUser: Codable {
 struct SupabaseError: Codable {
     let message: String?
     let error: String?
+    let errorDescription: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case message, error
+        case errorDescription = "error_description"
+    }
 }
 
 // MARK: - Errors
@@ -192,4 +262,3 @@ enum AuthError: LocalizedError {
         }
     }
 }
-

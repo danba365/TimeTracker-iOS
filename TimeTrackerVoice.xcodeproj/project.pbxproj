@@ -12,6 +12,7 @@
 		69D99FBFA5CADD16244BD637 /* Task.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78439F0D6785C0874C264021 /* Task.swift */; };
 		916CE8AD66B97952C5DD5B4B /* VoiceOrbView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9591C4C54EC4F7124AE2508 /* VoiceOrbView.swift */; };
 		96F45E29A73F59EEBF2115DE /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B45E0C0F046463E901D90CF /* AuthView.swift */; };
+		9A2C5E19797E468358A02D1C /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = FA6C910AE786FCA67615A724 /* GoogleSignIn */; };
 		9CB97603F3E33B4B06D82F5C /* AudioStreamManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53EA97FB722407D2230B4B9C /* AudioStreamManager.swift */; };
 		AF2E3F7E65C7E864E2FFADE2 /* Person.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAC6BB8463FA287ED632AE1B /* Person.swift */; };
 		B2B3EA9ED52CA3BB433347F8 /* TaskManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E864E346ACAB89104F342E9F /* TaskManager.swift */; };
@@ -39,6 +40,17 @@
 		E5EAE457C9906B6A456D2D48 /* VoiceState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceState.swift; sourceTree = "<group>"; };
 		E864E346ACAB89104F342E9F /* TaskManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		0C2152A9DEB9DEAE01907C08 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9A2C5E19797E468358A02D1C /* GoogleSignIn in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		0C79994C598EEACFFCB66D0E /* Resources */ = {
@@ -126,6 +138,7 @@
 			buildConfigurationList = 91AD3A174ED437F654301431 /* Build configuration list for PBXNativeTarget "TimeTrackerVoice" */;
 			buildPhases = (
 				7996794FAB99A0374899081B /* Sources */,
+				0C2152A9DEB9DEAE01907C08 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -133,6 +146,7 @@
 			);
 			name = TimeTrackerVoice;
 			packageProductDependencies = (
+				FA6C910AE786FCA67615A724 /* GoogleSignIn */,
 			);
 			productName = TimeTrackerVoice;
 			productReference = CC05BCE24353DA1B7E0F2DD0 /* TimeTrackerVoice.app */;
@@ -163,6 +177,9 @@
 			);
 			mainGroup = DDF633EC137B14601D51A512;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				2E1E3F64CA3F9419B1801686 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+			);
 			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
@@ -261,6 +278,8 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				GOOGLE_CLIENT_ID = "";
+				GOOGLE_REVERSED_CLIENT_ID = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -325,6 +344,8 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				GOOGLE_CLIENT_ID = "";
+				GOOGLE_REVERSED_CLIENT_ID = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -377,6 +398,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		2E1E3F64CA3F9419B1801686 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		FA6C910AE786FCA67615A724 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2E1E3F64CA3F9419B1801686 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 4672470FBF7026C0964196CC /* Project object */;
 }
