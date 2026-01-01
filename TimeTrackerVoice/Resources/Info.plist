@@ -25,14 +25,14 @@
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>$(GOOGLE_REVERSED_CLIENT_ID)</string>
+				<string>com.googleusercontent.apps.914000186889-djtm5ohohh7dndee6g38243ejhjpi599</string>
 			</array>
 			<key>CFBundleURLName</key>
 			<string>Google Sign-In</string>
 		</dict>
 	</array>
 	<key>GIDClientID</key>
-	<string>$(GOOGLE_CLIENT_ID)</string>
+	<string>914000186889-djtm5ohohh7dndee6g38243ejhjpi599.apps.googleusercontent.com</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>TimeTracker Voice needs access to your microphone to enable voice commands for managing your tasks and schedule.</string>
 	<key>UIApplicationSceneManifest</key>

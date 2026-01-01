@@ -9,7 +9,7 @@ struct TimeTrackerVoiceApp: App {
     var body: some Scene {
         WindowGroup {
             if authManager.isAuthenticated {
-                VoiceView()
+                MainTabView()
                     .environmentObject(authManager)
                     .environmentObject(taskManager)
             } else {
@@ -22,9 +22,7 @@ struct TimeTrackerVoiceApp: App {
     
     init() {
         // Configure Google Sign-In on app launch
-        if !Config.googleClientID.isEmpty {
-            GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: Config.googleClientID)
-        }
+        GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: Config.googleClientID)
     }
 }
 

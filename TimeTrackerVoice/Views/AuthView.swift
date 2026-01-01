@@ -9,8 +9,6 @@ struct AuthView: View {
     @State private var isSignUp = false
     @State private var showError = false
     @State private var errorMessage = ""
-    @State private var showGoogleClientIDAlert = false
-    @State private var googleClientIDInput = ""
     
     var body: some View {
         ZStack {
@@ -65,18 +63,6 @@ struct AuthView: View {
                             .cornerRadius(12)
                         }
                         .disabled(authManager.isLoading)
-                        
-                        // Configure Google Client ID button (if not set)
-                        if Config.googleClientID.isEmpty {
-                            Button(action: { showGoogleClientIDAlert = true }) {
-                                HStack {
-                                    Image(systemName: "gearshape")
-                                    Text("Configure Google Sign-In")
-                                }
-                                .font(.system(size: 14))
-                                .foregroundColor(Color(hex: "f59e0b"))
-                            }
-                        }
                     }
                     .padding(.horizontal, 30)
                     
@@ -159,15 +145,6 @@ struct AuthView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(errorMessage)
-        }
-        .alert("Google Client ID", isPresented: $showGoogleClientIDAlert) {
-            TextField("Client ID", text: $googleClientIDInput)
-            Button("Save") {
-                Config.setGoogleClientID(googleClientIDInput)
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Enter your Google OAuth Client ID from Google Cloud Console (iOS client)")
         }
     }
     

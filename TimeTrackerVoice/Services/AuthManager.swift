@@ -22,12 +22,8 @@ class AuthManager: ObservableObject {
     // MARK: - Google Sign-In Configuration
     
     private func configureGoogleSignIn() {
-        // Google Sign-In configuration is handled via Info.plist GIDClientID
-        // or can be set programmatically here
-        if !Config.googleClientID.isEmpty {
-            let config = GIDConfiguration(clientID: Config.googleClientID)
-            GIDSignIn.sharedInstance.configuration = config
-        }
+        let config = GIDConfiguration(clientID: Config.googleClientID)
+        GIDSignIn.sharedInstance.configuration = config
     }
     
     // MARK: - Session Management
@@ -76,11 +72,6 @@ class AuthManager: ObservableObject {
         error = nil
         
         defer { isLoading = false }
-        
-        // Check if Google Client ID is configured
-        guard !Config.googleClientID.isEmpty else {
-            throw AuthError.serverError("Google Client ID not configured. Please set it in Settings.")
-        }
         
         // Get the presenting view controller
         guard let windowScene = await UIApplication.shared.connectedScenes.first as? UIWindowScene,

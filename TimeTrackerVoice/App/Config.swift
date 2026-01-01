@@ -5,21 +5,8 @@ enum Config {
     static let supabaseURL = "https://bifohzgibivvoozjptsa.supabase.co"
     static let supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpZm9oemdpYml2dm9vempwdHNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA4MTU1MzAsImV4cCI6MjA3NjM5MTUzMH0.fPt4PoQ2p-0dKeLWYVn7jDEbKvtzzZjVW714zYZM6KA"
     
-    // Google Sign-In Configuration
-    // Get this from Google Cloud Console -> APIs & Services -> Credentials -> OAuth 2.0 Client IDs
-    // Create an iOS client ID with bundle ID: com.timetracker.voice
-    static var googleClientID: String {
-        // Check Info.plist first, then fall back to stored value
-        if let clientID = Bundle.main.object(forInfoDictionaryKey: "GIDClientID") as? String,
-           !clientID.isEmpty && !clientID.contains("GOOGLE_CLIENT_ID") {
-            return clientID
-        }
-        return UserDefaults.standard.string(forKey: "google_client_id") ?? ""
-    }
-    
-    static func setGoogleClientID(_ clientID: String) {
-        UserDefaults.standard.set(clientID, forKey: "google_client_id")
-    }
+    // Google Sign-In Configuration (iOS Client ID)
+    static let googleClientID = "914000186889-djtm5ohohh7dndee6g38243ejhjpi599.apps.googleusercontent.com"
     
     // OpenAI Configuration
     // TODO: Add your OpenAI API key here or load from secure storage
