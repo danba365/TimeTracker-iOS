@@ -9,8 +9,10 @@ struct VoiceOrbView: View {
     @State private var isAnimating = false
     @State private var pulseScale: CGFloat = 1.0
     @State private var rotation: Double = 0
+    @State private var waveformPhase: Double = 0
     
     private let orbSize: CGFloat = 160
+    private let waveformBars: Int = 24
     
     var body: some View {
         ZStack {
@@ -30,6 +32,17 @@ struct VoiceOrbView: View {
                 .frame(width: orbSize * 2, height: orbSize * 2)
                 .opacity(state.isActive ? 1 : 0.3)
             
+            // Waveform bars around orb (for listening/speaking states)
+            if state == .listening || state == .speaking {
+                WaveformView(
+                    barCount: waveformBars,
+                    audioLevel: audioLevel,
+                    radius: orbSize / 2 + 20,
+                    phase: waveformPhase,
+                    color: gradientColors.first!
+                )
+            }
+            
             // Pulse rings
             ForEach(0..<3) { index in
                 Circle()
@@ -37,6 +50,12 @@ struct VoiceOrbView: View {
                     .frame(width: orbSize, height: orbSize)
                     .scaleEffect(pulseScale + CGFloat(index) * 0.2)
                     .opacity(state == .listening ? Double(3 - index) / 6 : 0)
+            }
+            
+            // Processing spinner
+            if state == .processing {
+                ProcessingSpinner(color: gradientColors.first!)
+                    .frame(width: orbSize + 30, height: orbSize + 30)
             }
             
             // Main orb
@@ -161,19 +180,111 @@ struct VoiceOrbView: View {
             withAnimation(.linear(duration: 8).repeatForever(autoreverses: false)) {
                 rotation = 360
             }
+            // Animate waveform
+            withAnimation(.linear(duration: 0.8).repeatForever(autoreverses: false)) {
+                waveformPhase = .pi * 2
+            }
         case .processing:
             withAnimation(.linear(duration: 1).repeatForever(autoreverses: false)) {
                 rotation = 360
             }
             pulseScale = 1.0
+            waveformPhase = 0
         case .speaking:
             withAnimation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true)) {
                 isAnimating.toggle()
+            }
+            // Animate waveform for speaking
+            withAnimation(.linear(duration: 0.6).repeatForever(autoreverses: false)) {
+                waveformPhase = .pi * 2
             }
             pulseScale = 1.0
         default:
             pulseScale = 1.0
             rotation = 0
+            waveformPhase = 0
+        }
+    }
+}
+
+// MARK: - Waveform View
+
+struct WaveformView: View {
+    let barCount: Int
+    let audioLevel: Float
+    let radius: CGFloat
+    let phase: Double
+    let color: Color
+    
+    var body: some View {
+        ZStack {
+            ForEach(0..<barCount, id: \.self) { index in
+                WaveformBar(
+                    index: index,
+                    barCount: barCount,
+                    audioLevel: audioLevel,
+                    radius: radius,
+                    phase: phase,
+                    color: color
+                )
+            }
+        }
+    }
+}
+
+struct WaveformBar: View {
+    let index: Int
+    let barCount: Int
+    let audioLevel: Float
+    let radius: CGFloat
+    let phase: Double
+    let color: Color
+    
+    var body: some View {
+        let angle = Double(index) / Double(barCount) * 2 * .pi
+        let height = barHeight(for: index)
+        
+        return RoundedRectangle(cornerRadius: 2)
+            .fill(color.opacity(0.7))
+            .frame(width: 3, height: height)
+            .offset(y: -(radius + height / 2))
+            .rotationEffect(.radians(angle))
+    }
+    
+    private func barHeight(for index: Int) -> CGFloat {
+        let angle = Double(index) / Double(barCount) * 2 * .pi + phase
+        let sineValue = sin(angle * 3) * 0.5 + 0.5
+        let baseHeight: CGFloat = 8
+        let maxExtraHeight: CGFloat = 25
+        let audioInfluence = CGFloat(audioLevel) * maxExtraHeight
+        
+        return baseHeight + CGFloat(sineValue) * audioInfluence
+    }
+}
+
+// MARK: - Processing Spinner
+
+struct ProcessingSpinner: View {
+    let color: Color
+    
+    @State private var rotation: Double = 0
+    
+    var body: some View {
+        ZStack {
+            // Spinning dots
+            ForEach(0..<8, id: \.self) { index in
+                Circle()
+                    .fill(color.opacity(Double(8 - index) / 8))
+                    .frame(width: 8, height: 8)
+                    .offset(y: -60)
+                    .rotationEffect(.degrees(Double(index) * 45))
+            }
+        }
+        .rotationEffect(.degrees(rotation))
+        .onAppear {
+            withAnimation(.linear(duration: 1).repeatForever(autoreverses: false)) {
+                rotation = 360
+            }
         }
     }
 }

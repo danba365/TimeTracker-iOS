@@ -13,15 +13,18 @@
 		916CE8AD66B97952C5DD5B4B /* VoiceOrbView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9591C4C54EC4F7124AE2508 /* VoiceOrbView.swift */; };
 		96F45E29A73F59EEBF2115DE /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B45E0C0F046463E901D90CF /* AuthView.swift */; };
 		9CB97603F3E33B4B06D82F5C /* AudioStreamManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53EA97FB722407D2230B4B9C /* AudioStreamManager.swift */; };
+		AF2E3F7E65C7E864E2FFADE2 /* Person.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAC6BB8463FA287ED632AE1B /* Person.swift */; };
 		B2B3EA9ED52CA3BB433347F8 /* TaskManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E864E346ACAB89104F342E9F /* TaskManager.swift */; };
 		CDC44DD0190828061EA22FDA /* TimeTrackerVoiceApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8C3C8D017C28EC1FC41A04C /* TimeTrackerVoiceApp.swift */; };
 		D3CE25E03C1A76C43FE3D1EB /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D3FD0263B3A11FBBA221B23 /* AuthManager.swift */; };
+		ED552C106B5A3A2A11BC4E9E /* PeopleManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BF30D6DDB242B2ABF1DB321 /* PeopleManager.swift */; };
 		F282E300B5FF7CE32442566A /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00D5D11E54C27CCBA0960448 /* Config.swift */; };
 		F4C589B73616A8B5BC529A98 /* VoiceState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5EAE457C9906B6A456D2D48 /* VoiceState.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		00D5D11E54C27CCBA0960448 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
+		2BF30D6DDB242B2ABF1DB321 /* PeopleManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeopleManager.swift; sourceTree = "<group>"; };
 		2D3FD0263B3A11FBBA221B23 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
 		4B45E0C0F046463E901D90CF /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
 		53EA97FB722407D2230B4B9C /* AudioStreamManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioStreamManager.swift; sourceTree = "<group>"; };
@@ -29,6 +32,7 @@
 		78439F0D6785C0874C264021 /* Task.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Task.swift; sourceTree = "<group>"; };
 		8CCDEEFF3DADEBCC51030F10 /* VoiceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceView.swift; sourceTree = "<group>"; };
 		B9591C4C54EC4F7124AE2508 /* VoiceOrbView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceOrbView.swift; sourceTree = "<group>"; };
+		BAC6BB8463FA287ED632AE1B /* Person.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Person.swift; sourceTree = "<group>"; };
 		BD736E1729DABA033318794D /* RealtimeAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeAPIClient.swift; sourceTree = "<group>"; };
 		CC05BCE24353DA1B7E0F2DD0 /* TimeTrackerVoice.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TimeTrackerVoice.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D8C3C8D017C28EC1FC41A04C /* TimeTrackerVoiceApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeTrackerVoiceApp.swift; sourceTree = "<group>"; };
@@ -78,6 +82,7 @@
 		8A5DFE08CEF31543ECEEE00B /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				BAC6BB8463FA287ED632AE1B /* Person.swift */,
 				78439F0D6785C0874C264021 /* Task.swift */,
 				E5EAE457C9906B6A456D2D48 /* VoiceState.swift */,
 			);
@@ -89,6 +94,7 @@
 			children = (
 				53EA97FB722407D2230B4B9C /* AudioStreamManager.swift */,
 				2D3FD0263B3A11FBBA221B23 /* AuthManager.swift */,
+				2BF30D6DDB242B2ABF1DB321 /* PeopleManager.swift */,
 				BD736E1729DABA033318794D /* RealtimeAPIClient.swift */,
 				E864E346ACAB89104F342E9F /* TaskManager.swift */,
 			);
@@ -175,6 +181,8 @@
 				D3CE25E03C1A76C43FE3D1EB /* AuthManager.swift in Sources */,
 				96F45E29A73F59EEBF2115DE /* AuthView.swift in Sources */,
 				F282E300B5FF7CE32442566A /* Config.swift in Sources */,
+				ED552C106B5A3A2A11BC4E9E /* PeopleManager.swift in Sources */,
+				AF2E3F7E65C7E864E2FFADE2 /* Person.swift in Sources */,
 				36F954BA5AECB2CE70EAD6AB /* RealtimeAPIClient.swift in Sources */,
 				69D99FBFA5CADD16244BD637 /* Task.swift in Sources */,
 				B2B3EA9ED52CA3BB433347F8 /* TaskManager.swift in Sources */,

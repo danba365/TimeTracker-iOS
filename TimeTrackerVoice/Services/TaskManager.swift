@@ -20,11 +20,11 @@ class TaskManager: ObservableObject {
         isLoading = true
         defer { isLoading = false }
         
-        // Fetch tasks for past week to next month
+        // Fetch tasks for past 30 days to next 60 days (wider range for voice queries)
         let calendar = Calendar.current
         let today = Date()
-        let startDate = calendar.date(byAdding: .day, value: -7, to: today)!
-        let endDate = calendar.date(byAdding: .day, value: 30, to: today)!
+        let startDate = calendar.date(byAdding: .day, value: -30, to: today)!
+        let endDate = calendar.date(byAdding: .day, value: 60, to: today)!
         
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
@@ -177,6 +177,21 @@ class TaskManager: ObservableObject {
         let endStr = formatter.string(from: endDate)
         
         return tasks.filter { $0.date >= todayStr && $0.date <= endStr }
+    }
+    
+    func getPastTasks(days: Int = 7) -> [TaskItem] {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let today = Date()
+        let startDate = Calendar.current.date(byAdding: .day, value: -days, to: today)!
+        let todayStr = formatter.string(from: today)
+        let startStr = formatter.string(from: startDate)
+        
+        return tasks.filter { $0.date >= startStr && $0.date < todayStr }
+    }
+    
+    func getTasksInRange(startDate: String, endDate: String) -> [TaskItem] {
+        return tasks.filter { $0.date >= startDate && $0.date <= endDate }
     }
     
     func getCategoryById(_ id: String) -> Category? {

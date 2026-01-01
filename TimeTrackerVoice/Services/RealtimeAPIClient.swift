@@ -86,17 +86,27 @@ class RealtimeAPIClient: NSObject, ObservableObject {
             "session": [
                 "modalities": ["text", "audio"],
                 "instructions": """
-                You are a friendly AI voice assistant for TimeTracker, a task management app.
-                You help users manage their schedule through natural voice conversation.
+                You are a friendly AI voice assistant for TimeTracker, a task and contact management app.
+                You help users manage their schedule and contacts through natural voice conversation.
                 
                 Your capabilities:
-                - View tasks for any date
+                TASKS:
+                - View tasks for any date (past or future) - use get_tasks function
                 - Create new tasks
                 - Update existing tasks (mark complete, change time, etc.)
                 - Delete tasks
                 
-                Be conversational and natural. Confirm actions briefly.
-                Keep responses concise - this is voice, not text.
+                CONTACTS:
+                - View contacts (all or filtered by type: family, friend, colleague, other)
+                - Create new contacts
+                - Check upcoming birthdays
+                
+                IMPORTANT INSTRUCTIONS:
+                - When user asks about tasks on a specific date (like "yesterday" or "last week"), ALWAYS use the get_tasks function
+                - Be conversational and natural
+                - Confirm actions briefly
+                - Keep responses concise - this is voice, not text
+                - Support both English and Hebrew
                 
                 CURRENT CONTEXT:
                 \(context)
@@ -123,45 +133,85 @@ class RealtimeAPIClient: NSObject, ObservableObject {
     @MainActor
     private func buildTaskContext() -> String {
         let taskManager = TaskManager.shared
+        let peopleManager = PeopleManager.shared
+        
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
-        let today = formatter.string(from: Date())
+        let now = Date()
+        let today = formatter.string(from: now)
+        let yesterday = formatter.string(from: Calendar.current.date(byAdding: .day, value: -1, to: now)!)
         
         let todaysTasks = taskManager.getTodaysTasks()
         let upcomingTasks = taskManager.getUpcomingTasks(days: 7)
+        let yesterdayTasks = taskManager.getTasksByDate(yesterday)
         
         var context = "Today is \(today).\n\n"
         
+        // Yesterday's tasks (for reference)
+        if !yesterdayTasks.isEmpty {
+            context += "YESTERDAY'S TASKS (\(yesterday)):\n"
+            for task in yesterdayTasks {
+                let emoji = task.status == .done ? "✅" : task.status == .missed ? "❌" : "⏳"
+                let time = task.startTime.map { " at \($0)" } ?? ""
+                context += "\(emoji) \(task.title)\(time) - \(task.status.rawValue)\n"
+            }
+            context += "\n"
+        }
+        
+        // Today's tasks
         if !todaysTasks.isEmpty {
             context += "TODAY'S TASKS:\n"
             for task in todaysTasks {
                 let emoji = task.status == .done ? "✅" : task.status == .missed ? "❌" : "⏳"
                 let time = task.startTime.map { " at \($0)" } ?? ""
-                context += "\(emoji) \(task.title)\(time)\n"
+                context += "\(emoji) \(task.title)\(time) - \(task.status.rawValue)\n"
             }
             context += "\n"
         } else {
             context += "No tasks scheduled for today.\n\n"
         }
         
+        // Upcoming tasks
         let futureTasks = upcomingTasks.filter { $0.date != today }
         if !futureTasks.isEmpty {
-            context += "UPCOMING TASKS:\n"
+            context += "UPCOMING TASKS (Next 7 Days):\n"
             for task in futureTasks.prefix(10) {
                 let emoji = task.status == .done ? "✅" : "⏳"
                 context += "\(emoji) \(task.title) (\(task.date))\n"
             }
+            context += "\n"
         }
+        
+        // Contacts summary
+        let stats = peopleManager.stats
+        if stats.total > 0 {
+            context += "CONTACTS: \(stats.total) total"
+            context += " (\(stats.family) family, \(stats.friends) friends, \(stats.colleagues) colleagues)\n"
+            
+            // Upcoming birthdays
+            let upcomingBirthdays = peopleManager.getUpcomingBirthdays(days: 30)
+            if !upcomingBirthdays.isEmpty {
+                context += "Upcoming birthdays: "
+                context += upcomingBirthdays.prefix(3).map { person in
+                    "\(person.displayName) in \(person.daysUntilBirthday ?? 0) days"
+                }.joined(separator: ", ")
+                context += "\n"
+            }
+        }
+        
+        // Instructions for past dates
+        context += "\nIMPORTANT: For tasks on specific dates (past or future), ALWAYS use the get_tasks function with the date parameter.\n"
         
         return context
     }
     
     private func getFunctionTools() -> [[String: Any]] {
         return [
+            // Task tools
             [
                 "type": "function",
                 "name": "get_tasks",
-                "description": "Get tasks for a specific date or date range",
+                "description": "Get tasks for a specific date or date range - ALWAYS use this when user asks about tasks on a specific date!",
                 "parameters": [
                     "type": "object",
                     "properties": [
@@ -210,6 +260,50 @@ class RealtimeAPIClient: NSObject, ObservableObject {
                     "properties": [
                         "task_title": ["type": "string", "description": "Title of the task to delete"]
                     ]
+                ]
+            ],
+            // Contact/People tools
+            [
+                "type": "function",
+                "name": "get_contacts",
+                "description": "Get list of contacts/people, optionally filtered by relationship type",
+                "parameters": [
+                    "type": "object",
+                    "properties": [
+                        "relationship_type": [
+                            "type": "string",
+                            "enum": ["family", "friend", "colleague", "other", "all"],
+                            "description": "Filter by relationship type: family, friend, colleague, other, or all"
+                        ],
+                        "include_birthdays": [
+                            "type": "boolean",
+                            "description": "Whether to include upcoming birthday information"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                "type": "function",
+                "name": "create_contact",
+                "description": "Create a new contact/person",
+                "parameters": [
+                    "type": "object",
+                    "properties": [
+                        "first_name": ["type": "string", "description": "First name"],
+                        "last_name": ["type": "string", "description": "Last name (optional)"],
+                        "nickname": ["type": "string", "description": "Nickname (optional)"],
+                        "relationship_type": [
+                            "type": "string",
+                            "enum": ["family", "friend", "colleague", "other"],
+                            "description": "Relationship type"
+                        ],
+                        "relationship_detail": ["type": "string", "description": "Specific relationship, e.g.: brother, mother, best friend, manager"],
+                        "phone": ["type": "string", "description": "Phone number (optional)"],
+                        "email": ["type": "string", "description": "Email address (optional)"],
+                        "birthday": ["type": "string", "description": "Birthday in YYYY-MM-DD format (optional)"],
+                        "notes": ["type": "string", "description": "Additional notes (optional)"]
+                    ],
+                    "required": ["first_name", "relationship_type"]
                 ]
             ]
         ]
@@ -509,6 +603,77 @@ class RealtimeAPIClient: NSObject, ObservableObject {
                 return "Deleted task: \(task.title)"
             } catch {
                 return "Failed to delete task: \(error.localizedDescription)"
+            }
+            
+        // MARK: - Contact Tools
+            
+        case "get_contacts":
+            let peopleManager = PeopleManager.shared
+            let filterType = args["relationship_type"] as? String ?? "all"
+            let includeBirthdays = args["include_birthdays"] as? Bool ?? false
+            
+            var filteredPeople = peopleManager.people
+            if filterType != "all", let type = RelationshipType(rawValue: filterType) {
+                filteredPeople = peopleManager.getPeopleByType(type)
+            }
+            
+            if filteredPeople.isEmpty {
+                return filterType != "all" 
+                    ? "No contacts found of type \(filterType)"
+                    : "No contacts found"
+            }
+            
+            var result = "Contacts (\(filteredPeople.count)):\n"
+            result += filteredPeople.map { person in
+                var info = "• \(person.fullName) - \(person.relationshipType.rawValue)"
+                if let detail = person.relationshipDetail {
+                    info += " (\(detail))"
+                }
+                if includeBirthdays, let days = person.daysUntilBirthday {
+                    info += " - Birthday in \(days) days"
+                }
+                return info
+            }.joined(separator: "\n")
+            
+            if includeBirthdays {
+                let upcoming = peopleManager.getUpcomingBirthdays(days: 30)
+                if !upcoming.isEmpty {
+                    result += "\n\nUpcoming Birthdays:\n"
+                    result += upcoming.prefix(5).map { person in
+                        "🎂 \(person.fullName) in \(person.daysUntilBirthday ?? 0) days"
+                    }.joined(separator: "\n")
+                }
+            }
+            
+            return result
+            
+        case "create_contact":
+            let peopleManager = PeopleManager.shared
+            
+            guard let firstName = args["first_name"] as? String,
+                  let relationshipTypeStr = args["relationship_type"] as? String,
+                  let relationshipType = RelationshipType(rawValue: relationshipTypeStr) else {
+                return "Missing required fields: first_name and relationship_type"
+            }
+            
+            let input = CreatePersonInput(
+                firstName: firstName,
+                lastName: args["last_name"] as? String,
+                nickname: args["nickname"] as? String,
+                relationshipType: relationshipType,
+                relationshipDetail: args["relationship_detail"] as? String,
+                phone: args["phone"] as? String,
+                email: args["email"] as? String,
+                birthday: args["birthday"] as? String,
+                notes: args["notes"] as? String
+            )
+            
+            do {
+                let person = try await peopleManager.createPerson(input)
+                let relationshipInfo = person.relationshipDetail ?? person.relationshipType.rawValue
+                return "✅ Created contact: \(person.fullName) - \(relationshipInfo)"
+            } catch {
+                return "Failed to create contact: \(error.localizedDescription)"
             }
             
         default:

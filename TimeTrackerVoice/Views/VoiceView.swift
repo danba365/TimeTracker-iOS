@@ -138,8 +138,10 @@ struct VoiceView: View {
             } else {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("• \"What's on my schedule today?\"")
+                    Text("• \"What did I do yesterday?\"")
                     Text("• \"Add gym tomorrow at 7am\"")
-                    Text("• \"Mark today's meeting as done\"")
+                    Text("• \"How many contacts do I have?\"")
+                    Text("• \"Add mom to my contacts\"")
                 }
                 .font(.system(size: 14))
                 .foregroundColor(Color(hex: "475569"))
@@ -187,6 +189,7 @@ struct VoiceView: View {
         Task {
             await taskManager.fetchTasks()
             await taskManager.fetchCategories()
+            await PeopleManager.shared.fetchPeople()
         }
     }
 }
