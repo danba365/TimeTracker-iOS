@@ -126,66 +126,107 @@ struct ChatView: View {
     }
     
     private var welcomeView: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 24) {
+            Spacer()
+            
             Image(systemName: "message.badge.waveform")
-                .font(.system(size: 50))
+                .font(.system(size: 60))
                 .foregroundColor(Color(hex: "a78bfa"))
             
-            Text("איך אפשר לעזור? / How can I help?")
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(.white)
-            
-            VStack(alignment: .center, spacing: 12) {
-                // Hebrew suggestions
-                SuggestionButton(text: "מה יש לי היום?") {
-                    sendMessage("מה יש לי היום?")
-                }
-                SuggestionButton(text: "הוסף פגישה מחר ב-10 בבוקר") {
-                    sendMessage("הוסף פגישה מחר ב-10 בבוקר")
-                }
-                SuggestionButton(text: "מה המשימות הדחופות שלי?") {
-                    sendMessage("מה המשימות הדחופות שלי?")
-                }
+            VStack(spacing: 8) {
+                Text("איך אפשר לעזור?")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(.white)
                 
-                // Divider
-                Text("—")
-                    .foregroundColor(Color(hex: "64748b"))
-                
-                // English suggestions
-                SuggestionButton(text: "What's on my schedule today?") {
-                    sendMessage("What's on my schedule today?")
-                }
-                SuggestionButton(text: "Add a meeting tomorrow at 10am") {
-                    sendMessage("Add a meeting tomorrow at 10am")
-                }
+                Text("How can I help you today?")
+                    .font(.system(size: 16))
+                    .foregroundColor(Color(hex: "94a3b8"))
             }
+            
+            // Quick suggestions in a horizontal scroll
+            Text("💡 דוגמאות:")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(Color(hex: "64748b"))
+                .padding(.top, 20)
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    SuggestionButton(text: "מה יש לי היום?") {
+                        sendMessage("מה יש לי היום?")
+                    }
+                    SuggestionButton(text: "הוסף משימה") {
+                        sendMessage("הוסף משימה חדשה מחר בבוקר")
+                    }
+                    SuggestionButton(text: "What's my schedule?") {
+                        sendMessage("What's on my schedule today?")
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
+            
+            Spacer()
+            
+            // Hint to type
+            HStack(spacing: 8) {
+                Image(systemName: "keyboard")
+                    .font(.system(size: 14))
+                Text("הקלד הודעה למטה כדי להתחיל")
+                    .font(.system(size: 14))
+            }
+            .foregroundColor(Color(hex: "64748b"))
+            .padding(.bottom, 20)
         }
-        .padding(.top, 40)
     }
     
-    // MARK: - Input
+    // MARK: - Input (ChatGPT-style)
     
     private var inputView: some View {
-        HStack(spacing: 12) {
-            TextField("הקלד הודעה... / Type a message...", text: $messageText)
-                .textFieldStyle(ChatTextFieldStyle())
-                .focused($isInputFocused)
-                .multilineTextAlignment(isRTL ? .trailing : .leading)
-                .environment(\.layoutDirection, isRTL ? .rightToLeft : .leftToRight)
-                .onSubmit {
-                    sendCurrentMessage()
-                }
+        VStack(spacing: 0) {
+            // Divider line
+            Rectangle()
+                .fill(Color.white.opacity(0.1))
+                .frame(height: 1)
             
-            Button(action: sendCurrentMessage) {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 36))
-                    .foregroundColor(messageText.isEmpty ? Color(hex: "475569") : Color(hex: "a78bfa"))
+            HStack(alignment: .bottom, spacing: 12) {
+                // Text input container
+                HStack(alignment: .bottom, spacing: 8) {
+                    // Expandable text editor for multi-line input
+                    TextField("הקלד הודעה...", text: $messageText, axis: .vertical)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 16))
+                        .foregroundColor(.white)
+                        .focused($isInputFocused)
+                        .multilineTextAlignment(isRTL ? .trailing : .leading)
+                        .environment(\.layoutDirection, isRTL ? .rightToLeft : .leftToRight)
+                        .lineLimit(1...6)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .onSubmit {
+                            sendCurrentMessage()
+                        }
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: 24)
+                        .fill(Color.white.opacity(0.08))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24)
+                        .stroke(isInputFocused ? Color(hex: "a78bfa").opacity(0.5) : Color.white.opacity(0.15), lineWidth: 1)
+                )
+                
+                // Send button
+                Button(action: sendCurrentMessage) {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.system(size: 36))
+                        .foregroundColor(messageText.isEmpty ? Color(hex: "475569") : Color(hex: "a78bfa"))
+                }
+                .disabled(messageText.isEmpty || chatManager.isLoading)
+                .padding(.bottom, 4)
             }
-            .disabled(messageText.isEmpty || chatManager.isLoading)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
-        .background(Color(hex: "1a1a2e"))
+        .background(Color(hex: "0f0f23"))
     }
     
     // MARK: - Actions
@@ -417,18 +458,6 @@ struct TypingIndicator: View {
     }
 }
 
-// MARK: - Chat Text Field Style
-
-struct ChatTextFieldStyle: TextFieldStyle {
-    func _body(configuration: TextField<Self._Label>) -> some View {
-        configuration
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(Color.white.opacity(0.08))
-            .cornerRadius(20)
-            .foregroundColor(.white)
-    }
-}
 
 // MARK: - Character Extension for RTL Detection
 
