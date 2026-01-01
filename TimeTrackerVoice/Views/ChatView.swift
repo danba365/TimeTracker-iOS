@@ -38,8 +38,12 @@ struct ChatView: View {
                 // Messages
                 messagesView
                 
-                // Input
+                // Input - with extra padding for tab bar
                 inputView
+                
+                // Space for tab bar (approximately 80 points)
+                Color.clear
+                    .frame(height: 80)
             }
         }
         .onAppear {
@@ -184,49 +188,59 @@ struct ChatView: View {
         VStack(spacing: 0) {
             // Divider line
             Rectangle()
-                .fill(Color.white.opacity(0.1))
+                .fill(Color.white.opacity(0.2))
                 .frame(height: 1)
             
-            HStack(alignment: .bottom, spacing: 12) {
-                // Text input container
-                HStack(alignment: .bottom, spacing: 8) {
-                    // Expandable text editor for multi-line input
-                    TextField("הקלד הודעה...", text: $messageText, axis: .vertical)
-                        .textFieldStyle(.plain)
+            HStack(spacing: 12) {
+                // Text input box - SIMPLE AND VISIBLE
+                ZStack(alignment: .leading) {
+                    // Placeholder
+                    if messageText.isEmpty {
+                        Text("הקלד הודעה... / Type message...")
+                            .font(.system(size: 16))
+                            .foregroundColor(Color(hex: "64748b"))
+                            .padding(.horizontal, 16)
+                    }
+                    
+                    // Actual TextField
+                    TextField("", text: $messageText)
                         .font(.system(size: 16))
                         .foregroundColor(.white)
                         .focused($isInputFocused)
-                        .multilineTextAlignment(isRTL ? .trailing : .leading)
-                        .environment(\.layoutDirection, isRTL ? .rightToLeft : .leftToRight)
-                        .lineLimit(1...6)
                         .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
+                        .padding(.vertical, 14)
+                        .submitLabel(.send)
                         .onSubmit {
                             sendCurrentMessage()
                         }
                 }
-                .background(
-                    RoundedRectangle(cornerRadius: 24)
-                        .fill(Color.white.opacity(0.08))
-                )
+                .frame(height: 48)
+                .background(Color(hex: "2d2d44"))
+                .cornerRadius(24)
                 .overlay(
                     RoundedRectangle(cornerRadius: 24)
-                        .stroke(isInputFocused ? Color(hex: "a78bfa").opacity(0.5) : Color.white.opacity(0.15), lineWidth: 1)
+                        .stroke(isInputFocused ? Color(hex: "a78bfa") : Color(hex: "4a4a6a"), lineWidth: 2)
                 )
                 
                 // Send button
                 Button(action: sendCurrentMessage) {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 36))
-                        .foregroundColor(messageText.isEmpty ? Color(hex: "475569") : Color(hex: "a78bfa"))
+                    ZStack {
+                        Circle()
+                            .fill(messageText.isEmpty ? Color(hex: "3d3d5c") : Color(hex: "a78bfa"))
+                            .frame(width: 48, height: 48)
+                        
+                        Image(systemName: "arrow.up")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(.white)
+                    }
                 }
                 .disabled(messageText.isEmpty || chatManager.isLoading)
-                .padding(.bottom, 4)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
+            .padding(.bottom, 8) // Extra padding for tab bar
         }
-        .background(Color(hex: "0f0f23"))
+        .background(Color(hex: "1a1a2e"))
     }
     
     // MARK: - Actions
