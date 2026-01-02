@@ -591,10 +591,16 @@ class ChatManager: ObservableObject {
             return isHebrew ? "חסרים פרטי משימה" : "Missing task details"
         }
         
+        // Get user ID from AuthManager
+        guard let userId = AuthManager.shared.currentUser?.id else {
+            return isHebrew ? "❌ לא מחובר - אנא התחבר מחדש" : "❌ Not authenticated - please log in again"
+        }
+        
         var input = CreateTaskInput(
             title: title,
             date: date
         )
+        input.userId = userId  // Set the user_id for Supabase RLS
         input.startTime = args["start_time"] as? String
         input.endTime = args["end_time"] as? String
         if let notes = args["notes"] as? String {
@@ -603,10 +609,13 @@ class ChatManager: ObservableObject {
         
         do {
             let task = try await taskManager.createTask(input)
+            // Refresh tasks to show the new task in the list
+            await taskManager.fetchTasks()
             return isHebrew 
                 ? "✅ המשימה '\(task.title)' נוצרה בהצלחה לתאריך \(task.date)"
                 : "✅ Task '\(task.title)' created successfully for \(task.date)"
         } catch {
+            print("❌ Create task error: \(error)")
             return isHebrew ? "❌ שגיאה: \(error.localizedDescription)" : "❌ Error: \(error.localizedDescription)"
         }
     }

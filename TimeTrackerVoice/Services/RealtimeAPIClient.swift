@@ -557,18 +557,27 @@ class RealtimeAPIClient: NSObject, ObservableObject {
                 return "Missing required fields: title and date"
             }
             
-            let input = CreateTaskInput(
+            // Get user ID from AuthManager
+            guard let userId = AuthManager.shared.currentUser?.id else {
+                return "Not authenticated - please log in again"
+            }
+            
+            var input = CreateTaskInput(
                 title: title,
                 date: date,
                 startTime: args["start_time"] as? String,
                 priority: Priority(rawValue: args["priority"] as? String ?? "medium") ?? .medium
             )
+            input.userId = userId  // Set the user_id for Supabase RLS
             
             do {
                 let task = try await taskManager.createTask(input)
+                // Refresh tasks to show the new task in the list
+                await taskManager.fetchTasks()
                 let time = task.startTime.map { " at \($0)" } ?? ""
                 return "Created task: \(task.title) for \(task.date)\(time)"
             } catch {
+                print("❌ Create task error: \(error)")
                 return "Failed to create task: \(error.localizedDescription)"
             }
             
