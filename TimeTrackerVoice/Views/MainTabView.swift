@@ -43,7 +43,7 @@ struct CustomTabBar: View {
         HStack(spacing: 0) {
             TabBarButton(
                 icon: "calendar",
-                label: "משימות",
+                label: L10n.tabTasks,
                 isSelected: selectedTab == .tasks
             ) {
                 selectedTab = .tasks
@@ -51,7 +51,7 @@ struct CustomTabBar: View {
             
             TabBarButton(
                 icon: "message",
-                label: "צ'אט",
+                label: L10n.tabChat,
                 isSelected: selectedTab == .chat
             ) {
                 selectedTab = .chat
@@ -59,7 +59,7 @@ struct CustomTabBar: View {
             
             TabBarButton(
                 icon: "mic",
-                label: "קול",
+                label: L10n.tabVoice,
                 isSelected: selectedTab == .voice
             ) {
                 selectedTab = .voice

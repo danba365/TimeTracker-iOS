@@ -98,7 +98,7 @@ struct VoiceView: View {
                 Text("TimeTracker")
                     .font(.system(size: 28, weight: .bold))
                     .foregroundColor(.white)
-                Text("עוזר קולי / Voice Coach")
+                Text(L10n.voiceCoach)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(Color(hex: "a78bfa"))
             }
@@ -106,13 +106,13 @@ struct VoiceView: View {
             Spacer()
             
             Menu {
-                Button("הגדרות / Settings") {
+                Button(L10n.settings) {
                     showingSettings = true
                 }
-                Button("הגדר API Key") {
+                Button(L10n.setAPIKey) {
                     showingAPIKeyAlert = true
                 }
-                Button("התנתק / Sign Out", role: .destructive) {
+                Button(L10n.signOut, role: .destructive) {
                     authManager.signOut()
                 }
             } label: {
@@ -127,21 +127,21 @@ struct VoiceView: View {
     
     private var tipsView: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(isConversationActive ? "🎙️ דבר באופן טבעי" : "💡 נסה לומר:")
+            Text(isConversationActive ? "🎙️ \(L10n.speakNaturally)" : "💡 \(L10n.trySaying)")
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(Color(hex: "64748b"))
             
             if isConversationActive {
-                Text("הבינה המלאכותית תגיב כשתפסיק לדבר")
+                Text(L10n.aiWillRespond)
                     .font(.system(size: 14))
                     .foregroundColor(Color(hex: "475569"))
             } else {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("• \"מה יש לי היום?\"")
-                    Text("• \"מה עשיתי אתמול?\"")
-                    Text("• \"הוסף חדר כושר מחר ב-7 בבוקר\"")
-                    Text("• \"כמה אנשי קשר יש לי?\"")
-                    Text("• \"הוסף את אמא לאנשי הקשר\"")
+                    Text("• \(L10n.tipWhatToday)")
+                    Text("• \(L10n.tipWhatYesterday)")
+                    Text("• \(L10n.tipAddGym)")
+                    Text("• \(L10n.tipHowManyContacts)")
+                    Text("• \(L10n.tipAddMom)")
                 }
                 .font(.system(size: 14))
                 .foregroundColor(Color(hex: "475569"))

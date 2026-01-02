@@ -10,15 +10,15 @@ enum VoiceState {
     var statusText: String {
         switch self {
         case .idle:
-            return "לחץ להתחיל / Tap to start"
+            return L10n.tapToStart
         case .listening:
-            return "מקשיב... / Listening..."
+            return L10n.listening
         case .processing:
-            return "חושב... / Thinking..."
+            return L10n.thinking
         case .speaking:
-            return "מדבר... / Speaking..."
+            return L10n.speaking
         case .error:
-            return "אירעה שגיאה / Error occurred"
+            return L10n.errorOccurred
         }
     }
     

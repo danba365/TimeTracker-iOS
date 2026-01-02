@@ -65,10 +65,10 @@ struct ChatView: View {
     private var headerView: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text("עוזר AI / AI Assistant")
+                Text(L10n.aiAssistant)
                     .font(.system(size: 24, weight: .bold))
                     .foregroundColor(.white)
-                Text("שאל אותי על המשימות שלך")
+                Text(L10n.askMeAboutTasks)
                     .font(.system(size: 14))
                     .foregroundColor(Color(hex: "94a3b8"))
             }
@@ -76,10 +76,10 @@ struct ChatView: View {
             Spacer()
             
             Menu {
-                Button("הגדר API Key") {
+                Button(L10n.setAPIKey) {
                     showingAPIKeyAlert = true
                 }
-                Button("נקה צ'אט", role: .destructive) {
+                Button(L10n.clearChat, role: .destructive) {
                     chatManager.clearMessages()
                 }
             } label: {
@@ -141,15 +141,9 @@ struct ChatView: View {
                 .font(.system(size: 60))
                 .foregroundColor(Color(hex: "a78bfa"))
             
-            VStack(spacing: 8) {
-                Text("איך אפשר לעזור?")
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.white)
-                
-                Text("How can I help you today?")
-                    .font(.system(size: 16))
-                    .foregroundColor(Color(hex: "94a3b8"))
-            }
+            Text(L10n.howCanIHelp)
+                .font(.system(size: 24, weight: .bold))
+                .foregroundColor(.white)
             
             // Quick suggestions in a horizontal scroll
             Text("💡 דוגמאות:")
@@ -159,14 +153,11 @@ struct ChatView: View {
             
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
-                    SuggestionButton(text: "מה יש לי היום?") {
-                        sendMessage("מה יש לי היום?")
+                    SuggestionButton(text: L10n.suggestionWhatToday) {
+                        sendMessage(L10n.suggestionWhatToday)
                     }
-                    SuggestionButton(text: "הוסף משימה") {
-                        sendMessage("הוסף משימה חדשה מחר בבוקר")
-                    }
-                    SuggestionButton(text: "What's my schedule?") {
-                        sendMessage("What's on my schedule today?")
+                    SuggestionButton(text: L10n.suggestionAddTask) {
+                        sendMessage(L10n.suggestionAddTaskFull)
                     }
                 }
                 .padding(.horizontal, 20)
@@ -178,7 +169,7 @@ struct ChatView: View {
             HStack(spacing: 8) {
                 Image(systemName: "keyboard")
                     .font(.system(size: 14))
-                Text("הקלד הודעה למטה כדי להתחיל")
+                Text(L10n.typeMessageHint)
                     .font(.system(size: 14))
             }
             .foregroundColor(Color(hex: "64748b"))
@@ -200,7 +191,7 @@ struct ChatView: View {
                 ZStack(alignment: .leading) {
                     // Placeholder
                     if messageText.isEmpty {
-                        Text("הקלד הודעה... / Type message...")
+                        Text(L10n.typeMessagePlaceholder)
                             .font(.system(size: 16))
                             .foregroundColor(Color(hex: "64748b"))
                             .padding(.horizontal, 16)

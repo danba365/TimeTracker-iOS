@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		265D0B7AEB713522D3281186 /* VoiceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CCDEEFF3DADEBCC51030F10 /* VoiceView.swift */; };
 		36F954BA5AECB2CE70EAD6AB /* RealtimeAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD736E1729DABA033318794D /* RealtimeAPIClient.swift */; };
+		4F7F7EBEFACCE6366F5CC214 /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = E740B278B8A2ECB42B6AEFE7 /* L10n.swift */; };
 		69D99FBFA5CADD16244BD637 /* Task.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78439F0D6785C0874C264021 /* Task.swift */; };
 		747020AB23CEDE8553123EA3 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CBBA4C145D6716BB9707F68 /* ChatView.swift */; };
 		916CE8AD66B97952C5DD5B4B /* VoiceOrbView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9591C4C54EC4F7124AE2508 /* VoiceOrbView.swift */; };
@@ -44,6 +45,7 @@
 		CC05BCE24353DA1B7E0F2DD0 /* TimeTrackerVoice.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TimeTrackerVoice.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D8C3C8D017C28EC1FC41A04C /* TimeTrackerVoiceApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeTrackerVoiceApp.swift; sourceTree = "<group>"; };
 		E5EAE457C9906B6A456D2D48 /* VoiceState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceState.swift; sourceTree = "<group>"; };
+		E740B278B8A2ECB42B6AEFE7 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
 		E864E346ACAB89104F342E9F /* TaskManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -126,6 +128,7 @@
 			isa = PBXGroup;
 			children = (
 				00D5D11E54C27CCBA0960448 /* Config.swift */,
+				E740B278B8A2ECB42B6AEFE7 /* L10n.swift */,
 				D8C3C8D017C28EC1FC41A04C /* TimeTrackerVoiceApp.swift */,
 			);
 			path = App;
@@ -208,6 +211,7 @@
 				96F45E29A73F59EEBF2115DE /* AuthView.swift in Sources */,
 				747020AB23CEDE8553123EA3 /* ChatView.swift in Sources */,
 				F282E300B5FF7CE32442566A /* Config.swift in Sources */,
+				4F7F7EBEFACCE6366F5CC214 /* L10n.swift in Sources */,
 				9A430235AECA4C69410072E4 /* MainTabView.swift in Sources */,
 				ED552C106B5A3A2A11BC4E9E /* PeopleManager.swift in Sources */,
 				AF2E3F7E65C7E864E2FFADE2 /* Person.swift in Sources */,

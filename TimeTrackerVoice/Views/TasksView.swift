@@ -77,7 +77,7 @@ struct TasksView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "wifi.slash")
                         .font(.system(size: 12))
-                    Text("מצב לא מקוון / Offline Mode")
+                    Text(L10n.offlineMode)
                         .font(.system(size: 12))
                 }
                 .foregroundColor(Color(hex: "f59e0b"))
@@ -111,7 +111,7 @@ struct TasksView: View {
                     
                     // Last sync indicator
                     if let lastSync = taskManager.lastSyncDate {
-                        Text("עודכן: \(formatLastSync(lastSync))")
+                        Text("\(L10n.updated): \(formatLastSync(lastSync))")
                             .font(.system(size: 10))
                             .foregroundColor(Color(hex: "64748b"))
                     }
@@ -142,7 +142,7 @@ struct TasksView: View {
                         selectedDate = Date()
                     }
                 }) {
-                    Text("היום / Today")
+                    Text(L10n.today)
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundColor(Color(hex: "a78bfa"))
                         .padding(.horizontal, 10)
@@ -165,13 +165,14 @@ struct TasksView: View {
     
     private var formattedDayName: String {
         if calendar.isDateInToday(selectedDate) {
-            return "היום / Today"
+            return L10n.today
         } else if calendar.isDateInYesterday(selectedDate) {
-            return "אתמול / Yesterday"
+            return L10n.yesterday
         } else if calendar.isDateInTomorrow(selectedDate) {
-            return "מחר / Tomorrow"
+            return L10n.tomorrow
         } else {
             let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "he")
             formatter.dateFormat = "EEEE"
             return formatter.string(from: selectedDate)
         }
@@ -244,7 +245,7 @@ struct TasksView: View {
                     HStack(spacing: 8) {
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle(tint: Color(hex: "a78bfa")))
-                        Text("מעדכן... / Refreshing...")
+                        Text(L10n.refreshing)
                             .font(.system(size: 14))
                             .foregroundColor(Color(hex: "94a3b8"))
                     }
@@ -286,15 +287,11 @@ struct TasksView: View {
                 .font(.system(size: 50))
                 .foregroundColor(Color(hex: "475569"))
             
-            Text("אין משימות ליום זה")
+            Text(L10n.noTasksTitle)
                 .font(.system(size: 18, weight: .medium))
                 .foregroundColor(Color(hex: "64748b"))
             
-            Text("No tasks for this day")
-                .font(.system(size: 16))
-                .foregroundColor(Color(hex: "64748b"))
-            
-            Text("השתמש בקול או בצ'אט להוספת משימות")
+            Text(L10n.noTasksSubtitle)
                 .font(.system(size: 14))
                 .foregroundColor(Color(hex: "475569"))
         }
