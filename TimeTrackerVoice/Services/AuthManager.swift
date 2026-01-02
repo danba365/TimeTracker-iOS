@@ -200,6 +200,51 @@ class AuthManager: ObservableObject {
     func getAccessToken() -> String? {
         return accessToken
     }
+    
+    // MARK: - Token Refresh
+    
+    func refreshAccessToken() async -> Bool {
+        guard let refreshToken = refreshToken ?? UserDefaults.standard.string(forKey: "refresh_token") else {
+            print("❌ No refresh token available")
+            return false
+        }
+        
+        let url = URL(string: "\(Config.supabaseURL)/auth/v1/token?grant_type=refresh_token")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        
+        let body: [String: Any] = [
+            "refresh_token": refreshToken
+        ]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                print("❌ Token refresh failed")
+                return false
+            }
+            
+            let authResponse = try JSONDecoder().decode(AuthResponse.self, from: data)
+            
+            self.accessToken = authResponse.accessToken
+            self.refreshToken = authResponse.refreshToken
+            
+            UserDefaults.standard.set(authResponse.accessToken, forKey: "access_token")
+            if let newRefresh = authResponse.refreshToken {
+                UserDefaults.standard.set(newRefresh, forKey: "refresh_token")
+            }
+            
+            print("✅ Token refreshed successfully")
+            return true
+        } catch {
+            print("❌ Token refresh error: \(error)")
+            return false
+        }
+    }
 }
 
 // MARK: - Response Types

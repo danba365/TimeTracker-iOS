@@ -120,7 +120,46 @@ class TaskManager: ObservableObject {
             request.setValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             
-            let (data, _) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            // Check for HTTP errors
+            if let httpResponse = response as? HTTPURLResponse {
+                print("📡 Tasks API response status: \(httpResponse.statusCode)")
+                
+                if httpResponse.statusCode == 401 {
+                    print("⚠️ Token expired - attempting refresh...")
+                    
+                    // Try to refresh the token
+                    let refreshed = await AuthManager.shared.refreshAccessToken()
+                    
+                    if refreshed {
+                        // Retry the fetch with new token
+                        print("🔄 Retrying fetch with new token...")
+                        await fetchTasks()
+                        return
+                    } else {
+                        print("❌ Token refresh failed - please log in again")
+                        self.error = "Session expired. Please log in again."
+                        isOffline = true
+                        return
+                    }
+                }
+                
+                if httpResponse.statusCode != 200 {
+                    // Try to parse error message
+                    if let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let message = errorJson["message"] as? String {
+                        print("❌ API Error: \(message)")
+                        self.error = message
+                    } else {
+                        print("❌ HTTP Error: \(httpResponse.statusCode)")
+                        self.error = "Server error: \(httpResponse.statusCode)"
+                    }
+                    isOffline = true
+                    return
+                }
+            }
+            
             tasks = try JSONDecoder().decode([TaskItem].self, from: data)
             
             // ✅ Save to cache after successful fetch
@@ -132,6 +171,12 @@ class TaskManager: ObservableObject {
             self.error = error.localizedDescription
             isOffline = true
             print("❌ Error fetching tasks: \(error)")
+            
+            // Debug: Print raw response to see what we got
+            if let dataStr = String(data: Data(), encoding: .utf8) {
+                print("📄 Raw response: \(dataStr)")
+            }
+            
             print("📦 Using \(tasks.count) cached tasks instead")
             // Tasks remain from cache - user can still see their data offline
         }

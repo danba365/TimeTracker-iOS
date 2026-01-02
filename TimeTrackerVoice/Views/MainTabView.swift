@@ -83,10 +83,22 @@ struct TabBarButton: View {
     let isSelected: Bool
     let action: () -> Void
     
+    // Some SF Symbols don't have .fill variants
+    private var iconName: String {
+        if isSelected {
+            // Calendar doesn't have .fill, use circle variant
+            if icon == "calendar" {
+                return "calendar.circle.fill"
+            }
+            return "\(icon).fill"
+        }
+        return icon
+    }
+    
     var body: some View {
         Button(action: action) {
             VStack(spacing: 4) {
-                Image(systemName: isSelected ? "\(icon).fill" : icon)
+                Image(systemName: iconName)
                     .font(.system(size: 22))
                     .foregroundColor(isSelected ? Color(hex: "a78bfa") : Color(hex: "64748b"))
                 
