@@ -81,36 +81,45 @@ class RealtimeAPIClient: NSObject, ObservableObject {
     }
     
     private func sendSessionConfig(context: String) {
+        // Get current language from L10n
+        let currentLang = L10n.shared.currentLanguage
+        let promptManager = PromptManager.shared
+        
+        // Build instructions from prompts
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dayFormatter = DateFormatter()
+        dayFormatter.dateFormat = "EEEE"
+        dayFormatter.locale = currentLang == .hebrew ? Locale(identifier: "he") : Locale(identifier: "en")
+        
+        let dateContext = promptManager.getPromptWithVars(
+            key: "date_context",
+            language: currentLang,
+            vars: [
+                "date": dateFormatter.string(from: Date()),
+                "day_name": dayFormatter.string(from: Date())
+            ]
+        )
+        
+        let systemInstructions = promptManager.getPrompt(key: "system_instructions", language: currentLang)
+        let voiceBehavior = promptManager.getPrompt(key: "voice_behavior", language: currentLang)
+        
+        let fullInstructions = """
+        \(systemInstructions)
+        
+        \(dateContext)
+        
+        \(voiceBehavior)
+        
+        CURRENT CONTEXT:
+        \(context)
+        """
+        
         let config: [String: Any] = [
             "type": "session.update",
             "session": [
                 "modalities": ["text", "audio"],
-                "instructions": """
-                You are a friendly AI voice assistant for TimeTracker, a task and contact management app.
-                You help users manage their schedule and contacts through natural voice conversation.
-                
-                Your capabilities:
-                TASKS:
-                - View tasks for any date (past or future) - use get_tasks function
-                - Create new tasks
-                - Update existing tasks (mark complete, change time, etc.)
-                - Delete tasks
-                
-                CONTACTS:
-                - View contacts (all or filtered by type: family, friend, colleague, other)
-                - Create new contacts
-                - Check upcoming birthdays
-                
-                IMPORTANT INSTRUCTIONS:
-                - When user asks about tasks on a specific date (like "yesterday" or "last week"), ALWAYS use the get_tasks function
-                - Be conversational and natural
-                - Confirm actions briefly
-                - Keep responses concise - this is voice, not text
-                - Support both English and Hebrew
-                
-                CURRENT CONTEXT:
-                \(context)
-                """,
+                "instructions": fullInstructions,
                 "voice": "alloy",
                 "input_audio_format": "pcm16",
                 "output_audio_format": "pcm16",
@@ -313,16 +322,24 @@ class RealtimeAPIClient: NSObject, ObservableObject {
     
     func startConversation() {
         isConversationActive = true
-        if !isConnected {
-            connect()
-            // Wait for connection
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
-                self?.audioManager.startRecording()
-                self?.voiceState = .listening
+        
+        // Initialize prompts before starting conversation
+        Task {
+            await PromptManager.shared.initialize()
+            
+            await MainActor.run {
+                if !self.isConnected {
+                    self.connect()
+                    // Wait for connection
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+                        self?.audioManager.startRecording()
+                        self?.voiceState = .listening
+                    }
+                } else {
+                    self.audioManager.startRecording()
+                    self.voiceState = .listening
+                }
             }
-        } else {
-            audioManager.startRecording()
-            voiceState = .listening
         }
     }
     
