@@ -232,13 +232,25 @@ struct TasksView: View {
         return days
     }
     
-    // MARK: - Tasks List
+    // MARK: - Tasks List (with Pull-to-Refresh)
     
     private var tasksListView: some View {
         let dayTasks = getTasksForSelectedDate()
         
         return ScrollView {
             LazyVStack(spacing: 12) {
+                // Pull to refresh hint
+                if taskManager.isLoading {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: Color(hex: "a78bfa")))
+                        Text("מעדכן... / Refreshing...")
+                            .font(.system(size: 14))
+                            .foregroundColor(Color(hex: "94a3b8"))
+                    }
+                    .padding(.vertical, 8)
+                }
+                
                 if dayTasks.isEmpty {
                     emptyStateView
                 } else {
@@ -252,6 +264,20 @@ struct TasksView: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 100) // Space for tab bar
         }
+        .refreshable {
+            // Pull-to-refresh action
+            await refreshData()
+        }
+    }
+    
+    // MARK: - Refresh Data
+    
+    private func refreshData() async {
+        print("🔄 Pull to refresh triggered")
+        await taskManager.fetchTasks()
+        await taskManager.fetchCategories()
+        await PeopleManager.shared.fetchPeople()
+        print("✅ Refresh complete")
     }
     
     private var emptyStateView: some View {

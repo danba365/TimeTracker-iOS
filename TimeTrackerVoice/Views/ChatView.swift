@@ -119,6 +119,10 @@ struct ChatView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
             }
+            .refreshable {
+                // Refresh tasks data for chat context
+                await taskManager.fetchTasks()
+            }
             .onChange(of: chatManager.messages.count) { _, _ in
                 if let lastMessage = chatManager.messages.last {
                     withAnimation {
