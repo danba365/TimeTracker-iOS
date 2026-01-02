@@ -293,15 +293,48 @@ struct TasksView: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         let dateStr = formatter.string(from: date)
-        return taskManager.tasks.contains { $0.date == dateStr }
+        
+        // Count visible tasks (excluding hidden recurring parents)
+        let visibleTasks = taskManager.tasks.filter { task in
+            guard task.date == dateStr else { return false }
+            
+            // If recurring parent, check if instance exists
+            if task.isRecurring && task.parentTaskId == nil {
+                let hasInstance = taskManager.tasks.contains { otherTask in
+                    otherTask.parentTaskId == task.id && otherTask.date == dateStr
+                }
+                return !hasInstance
+            }
+            return true
+        }
+        
+        return !visibleTasks.isEmpty
     }
     
     private func getTasksForSelectedDate() -> [TaskItem] {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         let dateStr = formatter.string(from: selectedDate)
+        
         return taskManager.tasks
-            .filter { $0.date == dateStr }
+            .filter { task in
+                // Must match the selected date
+                guard task.date == dateStr else { return false }
+                
+                // If it's a recurring PARENT task (isRecurring=true AND no parentTaskId),
+                // only show it if there's no instance for this date
+                // This prevents showing both parent and instance on the same day
+                if task.isRecurring && task.parentTaskId == nil {
+                    // Check if there's an instance (child task) for this date with same title
+                    let hasInstance = taskManager.tasks.contains { otherTask in
+                        otherTask.parentTaskId == task.id && otherTask.date == dateStr
+                    }
+                    // Hide parent if instance exists for this date
+                    return !hasInstance
+                }
+                
+                return true
+            }
             .sorted { ($0.startTime ?? "") < ($1.startTime ?? "") }
     }
     
