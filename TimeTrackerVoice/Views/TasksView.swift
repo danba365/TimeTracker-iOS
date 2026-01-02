@@ -71,45 +71,69 @@ struct TasksView: View {
     // MARK: - Header
     
     private var headerView: some View {
-        HStack {
-            // Previous day button
-            Button(action: {
-                withAnimation {
-                    selectedDate = calendar.date(byAdding: .day, value: -1, to: selectedDate) ?? selectedDate
+        VStack(spacing: 8) {
+            // Offline indicator
+            if taskManager.isOffline {
+                HStack(spacing: 6) {
+                    Image(systemName: "wifi.slash")
+                        .font(.system(size: 12))
+                    Text("מצב לא מקוון / Offline Mode")
+                        .font(.system(size: 12))
                 }
-            }) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(Color(hex: "a78bfa"))
+                .foregroundColor(Color(hex: "f59e0b"))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color(hex: "f59e0b").opacity(0.15))
+                .cornerRadius(8)
             }
             
-            Spacer()
-            
-            VStack(alignment: .center, spacing: 4) {
-                Text(formattedDayName)
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.white)
-                Text(formattedFullDate)
-                    .font(.system(size: 14))
-                    .foregroundColor(Color(hex: "94a3b8"))
-            }
-            
-            Spacer()
-            
-            // Next day button
-            Button(action: {
-                withAnimation {
-                    selectedDate = calendar.date(byAdding: .day, value: 1, to: selectedDate) ?? selectedDate
+            HStack {
+                // Previous day button
+                Button(action: {
+                    withAnimation {
+                        selectedDate = calendar.date(byAdding: .day, value: -1, to: selectedDate) ?? selectedDate
+                    }
+                }) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(Color(hex: "a78bfa"))
                 }
-            }) {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(Color(hex: "a78bfa"))
+                
+                Spacer()
+                
+                VStack(alignment: .center, spacing: 4) {
+                    Text(formattedDayName)
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(.white)
+                    Text(formattedFullDate)
+                        .font(.system(size: 14))
+                        .foregroundColor(Color(hex: "94a3b8"))
+                    
+                    // Last sync indicator
+                    if let lastSync = taskManager.lastSyncDate {
+                        Text("עודכן: \(formatLastSync(lastSync))")
+                            .font(.system(size: 10))
+                            .foregroundColor(Color(hex: "64748b"))
+                    }
+                }
+                
+                Spacer()
+                
+                // Next day button
+                Button(action: {
+                    withAnimation {
+                        selectedDate = calendar.date(byAdding: .day, value: 1, to: selectedDate) ?? selectedDate
+                    }
+                }) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(Color(hex: "a78bfa"))
+                }
             }
         }
         .padding(.horizontal, 20)
-        .padding(.top, 20)
-        .padding(.bottom, 16)
+        .padding(.top, 16)
+        .padding(.bottom, 12)
         .overlay(alignment: .topTrailing) {
             // Today button
             if !calendar.isDateInToday(selectedDate) {
@@ -126,10 +150,17 @@ struct TasksView: View {
                         .background(Color(hex: "a78bfa").opacity(0.2))
                         .cornerRadius(6)
                 }
-                .padding(.top, 16)
+                .padding(.top, 12)
                 .padding(.trailing, 20)
             }
         }
+    }
+    
+    private func formatLastSync(_ date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.locale = Locale(identifier: "he")
+        formatter.unitsStyle = .abbreviated
+        return formatter.localizedString(for: date, relativeTo: Date())
     }
     
     private var formattedDayName: String {

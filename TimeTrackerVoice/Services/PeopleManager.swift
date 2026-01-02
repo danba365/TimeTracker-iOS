@@ -8,13 +8,54 @@ class PeopleManager: ObservableObject {
     @Published var people: [Person] = []
     @Published var isLoading = false
     @Published var error: String?
+    @Published var lastSyncDate: Date?
     
-    private init() {}
+    // Cache key
+    private let peopleKey = "cached_people"
+    private let lastSyncKey = "people_last_sync"
+    
+    private init() {
+        // Load cached data immediately
+        loadCachedData()
+    }
+    
+    // MARK: - Local Cache Management
+    
+    private func loadCachedData() {
+        if let data = UserDefaults.standard.data(forKey: peopleKey) {
+            do {
+                let cachedPeople = try JSONDecoder().decode([Person].self, from: data)
+                self.people = cachedPeople
+                print("📦 Loaded \(cachedPeople.count) cached contacts")
+            } catch {
+                print("⚠️ Failed to decode cached contacts: \(error)")
+            }
+        }
+        
+        if let lastSync = UserDefaults.standard.object(forKey: lastSyncKey) as? Date {
+            self.lastSyncDate = lastSync
+        }
+    }
+    
+    private func savePeopleToCache() {
+        do {
+            let data = try JSONEncoder().encode(people)
+            UserDefaults.standard.set(data, forKey: peopleKey)
+            UserDefaults.standard.set(Date(), forKey: lastSyncKey)
+            self.lastSyncDate = Date()
+            print("💾 Saved \(people.count) contacts to cache")
+        } catch {
+            print("⚠️ Failed to save contacts to cache: \(error)")
+        }
+    }
     
     // MARK: - Fetch People
     
     func fetchPeople() async {
-        guard let token = AuthManager.shared.getAccessToken() else { return }
+        guard let token = AuthManager.shared.getAccessToken() else {
+            print("⚠️ No access token - using cached contacts only")
+            return
+        }
         
         isLoading = true
         defer { isLoading = false }
@@ -22,16 +63,22 @@ class PeopleManager: ObservableObject {
         do {
             let url = URL(string: "\(Config.supabaseURL)/rest/v1/people?order=first_name.asc")!
             var request = URLRequest(url: url)
+            request.timeoutInterval = 10
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.setValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             
             let (data, _) = try await URLSession.shared.data(for: request)
             people = try JSONDecoder().decode([Person].self, from: data)
-            print("✅ Fetched \(people.count) contacts")
+            
+            // ✅ Save to cache
+            savePeopleToCache()
+            
+            print("✅ Fetched \(people.count) contacts from server")
         } catch {
             self.error = error.localizedDescription
             print("❌ Error fetching contacts: \(error)")
+            print("📦 Using \(people.count) cached contacts instead")
         }
     }
     
@@ -65,6 +112,9 @@ class PeopleManager: ObservableObject {
         
         self.people.append(newPerson)
         self.people.sort { $0.firstName < $1.firstName }
+        
+        // ✅ Save to cache
+        savePeopleToCache()
         
         print("✅ Created contact: \(newPerson.fullName)")
         return newPerson
@@ -102,6 +152,9 @@ class PeopleManager: ObservableObject {
             self.people[index] = updatedPerson
         }
         
+        // ✅ Save to cache
+        savePeopleToCache()
+        
         print("✅ Updated contact: \(updatedPerson.fullName)")
         return updatedPerson
     }
@@ -126,6 +179,10 @@ class PeopleManager: ObservableObject {
         }
         
         people.removeAll { $0.id == id }
+        
+        // ✅ Save to cache
+        savePeopleToCache()
+        
         print("✅ Deleted contact")
     }
     

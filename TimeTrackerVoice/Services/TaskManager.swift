@@ -9,13 +9,94 @@ class TaskManager: ObservableObject {
     @Published var categories: [Category] = []
     @Published var isLoading = false
     @Published var error: String?
+    @Published var lastSyncDate: Date?
+    @Published var isOffline = false
     
-    private init() {}
+    // Cache keys
+    private let tasksKey = "cached_tasks"
+    private let categoriesKey = "cached_categories"
+    private let lastSyncKey = "last_sync_date"
+    
+    private init() {
+        // Load cached data immediately on init
+        loadCachedData()
+    }
+    
+    // MARK: - Local Cache Management
+    
+    /// Load cached tasks and categories from UserDefaults
+    private func loadCachedData() {
+        // Load cached tasks
+        if let tasksData = UserDefaults.standard.data(forKey: tasksKey) {
+            do {
+                let cachedTasks = try JSONDecoder().decode([TaskItem].self, from: tasksData)
+                self.tasks = cachedTasks
+                print("📦 Loaded \(cachedTasks.count) cached tasks")
+            } catch {
+                print("⚠️ Failed to decode cached tasks: \(error)")
+            }
+        }
+        
+        // Load cached categories
+        if let categoriesData = UserDefaults.standard.data(forKey: categoriesKey) {
+            do {
+                let cachedCategories = try JSONDecoder().decode([Category].self, from: categoriesData)
+                self.categories = cachedCategories
+                print("📦 Loaded \(cachedCategories.count) cached categories")
+            } catch {
+                print("⚠️ Failed to decode cached categories: \(error)")
+            }
+        }
+        
+        // Load last sync date
+        if let lastSync = UserDefaults.standard.object(forKey: lastSyncKey) as? Date {
+            self.lastSyncDate = lastSync
+            print("📦 Last sync: \(lastSync)")
+        }
+    }
+    
+    /// Save tasks to local cache
+    private func saveTasksToCache() {
+        do {
+            let data = try JSONEncoder().encode(tasks)
+            UserDefaults.standard.set(data, forKey: tasksKey)
+            UserDefaults.standard.set(Date(), forKey: lastSyncKey)
+            self.lastSyncDate = Date()
+            print("💾 Saved \(tasks.count) tasks to cache")
+        } catch {
+            print("⚠️ Failed to save tasks to cache: \(error)")
+        }
+    }
+    
+    /// Save categories to local cache
+    private func saveCategoriesToCache() {
+        do {
+            let data = try JSONEncoder().encode(categories)
+            UserDefaults.standard.set(data, forKey: categoriesKey)
+            print("💾 Saved \(categories.count) categories to cache")
+        } catch {
+            print("⚠️ Failed to save categories to cache: \(error)")
+        }
+    }
+    
+    /// Clear all cached data
+    func clearCache() {
+        UserDefaults.standard.removeObject(forKey: tasksKey)
+        UserDefaults.standard.removeObject(forKey: categoriesKey)
+        UserDefaults.standard.removeObject(forKey: lastSyncKey)
+        tasks = []
+        categories = []
+        lastSyncDate = nil
+        print("🗑️ Cache cleared")
+    }
     
     // MARK: - Fetch Tasks
     
     func fetchTasks() async {
-        guard let token = AuthManager.shared.getAccessToken() else { return }
+        guard let token = AuthManager.shared.getAccessToken() else {
+            print("⚠️ No access token - using cached data only")
+            return
+        }
         
         isLoading = true
         defer { isLoading = false }
@@ -34,34 +115,52 @@ class TaskManager: ObservableObject {
         do {
             let url = URL(string: "\(Config.supabaseURL)/rest/v1/tasks?date=gte.\(startStr)&date=lte.\(endStr)&order=date.asc,start_time.asc")!
             var request = URLRequest(url: url)
+            request.timeoutInterval = 10 // 10 second timeout
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.setValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             
             let (data, _) = try await URLSession.shared.data(for: request)
             tasks = try JSONDecoder().decode([TaskItem].self, from: data)
-            print("✅ Fetched \(tasks.count) tasks")
+            
+            // ✅ Save to cache after successful fetch
+            saveTasksToCache()
+            isOffline = false
+            
+            print("✅ Fetched \(tasks.count) tasks from server")
         } catch {
             self.error = error.localizedDescription
+            isOffline = true
             print("❌ Error fetching tasks: \(error)")
+            print("📦 Using \(tasks.count) cached tasks instead")
+            // Tasks remain from cache - user can still see their data offline
         }
     }
     
     func fetchCategories() async {
-        guard let token = AuthManager.shared.getAccessToken() else { return }
+        guard let token = AuthManager.shared.getAccessToken() else {
+            print("⚠️ No access token - using cached categories only")
+            return
+        }
         
         do {
             let url = URL(string: "\(Config.supabaseURL)/rest/v1/categories?order=name.asc")!
             var request = URLRequest(url: url)
+            request.timeoutInterval = 10
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.setValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             
             let (data, _) = try await URLSession.shared.data(for: request)
             categories = try JSONDecoder().decode([Category].self, from: data)
-            print("✅ Fetched \(categories.count) categories")
+            
+            // ✅ Save to cache
+            saveCategoriesToCache()
+            
+            print("✅ Fetched \(categories.count) categories from server")
         } catch {
             print("❌ Error fetching categories: \(error)")
+            print("📦 Using \(categories.count) cached categories instead")
         }
     }
     
@@ -95,6 +194,9 @@ class TaskManager: ObservableObject {
         
         self.tasks.append(newTask)
         self.tasks.sort { $0.date < $1.date }
+        
+        // ✅ Save to cache after create
+        saveTasksToCache()
         
         print("✅ Created task: \(newTask.title)")
         return newTask
@@ -130,6 +232,9 @@ class TaskManager: ObservableObject {
             self.tasks[index] = updatedTask
         }
         
+        // ✅ Save to cache after update
+        saveTasksToCache()
+        
         print("✅ Updated task: \(updatedTask.title)")
         return updatedTask
     }
@@ -152,6 +257,10 @@ class TaskManager: ObservableObject {
         }
         
         tasks.removeAll { $0.id == id }
+        
+        // ✅ Save to cache after delete
+        saveTasksToCache()
+        
         print("✅ Deleted task")
     }
     
