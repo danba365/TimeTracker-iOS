@@ -4,6 +4,8 @@ import SwiftUI
 struct MainTabView: View {
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var taskManager: TaskManager
+    @EnvironmentObject var peopleManager: PeopleManager
+    @ObservedObject private var l10n = L10n.shared
     
     @State private var selectedTab: Tab = .tasks
     
@@ -26,11 +28,13 @@ struct MainTabView: View {
             }
             .environmentObject(authManager)
             .environmentObject(taskManager)
+            .environmentObject(peopleManager)
             
             // Tab Bar
             CustomTabBar(selectedTab: $selectedTab)
         }
         .ignoresSafeArea(.keyboard)
+        .environment(\.layoutDirection, l10n.currentLanguage.isRTL ? .rightToLeft : .leftToRight)
     }
 }
 
@@ -115,5 +119,6 @@ struct TabBarButton: View {
     MainTabView()
         .environmentObject(AuthManager.shared)
         .environmentObject(TaskManager.shared)
+        .environmentObject(PeopleManager.shared)
 }
 

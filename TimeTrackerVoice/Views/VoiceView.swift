@@ -4,8 +4,10 @@ import SwiftUI
 struct VoiceView: View {
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var taskManager: TaskManager
+    @EnvironmentObject var peopleManager: PeopleManager
     @StateObject private var realtimeClient = RealtimeAPIClient.shared
     @StateObject private var audioManager = AudioStreamManager.shared
+    @ObservedObject private var l10n = L10n.shared
     
     @State private var isConversationActive = false
     @State private var showingSettings = false
@@ -79,15 +81,22 @@ struct VoiceView: View {
             checkAPIKey()
             loadData()
         }
-        .alert("OpenAI API Key Required", isPresented: $showingAPIKeyAlert) {
-            TextField("API Key", text: $apiKeyInput)
-            Button("Save") {
+        .sheet(isPresented: $showingSettings) {
+            SettingsView()
+                .environmentObject(authManager)
+                .environmentObject(taskManager)
+                .environmentObject(peopleManager)
+        }
+        .alert(L10n.enterAPIKey, isPresented: $showingAPIKeyAlert) {
+            TextField(L10n.apiKeyPlaceholder, text: $apiKeyInput)
+            Button(L10n.save) {
                 Config.setOpenAIAPIKey(apiKeyInput)
             }
-            Button("Cancel", role: .cancel) {}
+            Button(L10n.cancel, role: .cancel) {}
         } message: {
-            Text("Enter your OpenAI API key to enable voice features.")
+            Text(l10n.currentLanguage == .hebrew ? "הזן את מפתח ה-API של OpenAI כדי להפעיל תכונות קוליות" : "Enter your OpenAI API key to enable voice features.")
         }
+        .environment(\.layoutDirection, l10n.currentLanguage.isRTL ? .rightToLeft : .leftToRight)
     }
     
     // MARK: - Subviews
@@ -198,5 +207,6 @@ struct VoiceView: View {
     VoiceView()
         .environmentObject(AuthManager.shared)
         .environmentObject(TaskManager.shared)
+        .environmentObject(PeopleManager.shared)
 }
 

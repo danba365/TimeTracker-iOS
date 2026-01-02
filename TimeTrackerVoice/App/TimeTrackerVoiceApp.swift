@@ -5,6 +5,7 @@ import GoogleSignIn
 struct TimeTrackerVoiceApp: App {
     @StateObject private var authManager = AuthManager.shared
     @StateObject private var taskManager = TaskManager.shared
+    @StateObject private var peopleManager = PeopleManager.shared
     
     var body: some Scene {
         WindowGroup {
@@ -12,6 +13,7 @@ struct TimeTrackerVoiceApp: App {
                 MainTabView()
                     .environmentObject(authManager)
                     .environmentObject(taskManager)
+                    .environmentObject(peopleManager)
             } else {
                 AuthView()
                     .environmentObject(authManager)

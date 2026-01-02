@@ -23,6 +23,7 @@
 		D3CE25E03C1A76C43FE3D1EB /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D3FD0263B3A11FBBA221B23 /* AuthManager.swift */; };
 		DD870AD22053D46299184719 /* TasksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D2477154C54FC4FD6E11889 /* TasksView.swift */; };
 		ED552C106B5A3A2A11BC4E9E /* PeopleManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BF30D6DDB242B2ABF1DB321 /* PeopleManager.swift */; };
+		F0377CA10F15503727AE85FA /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A955FC5339920743150036A6 /* SettingsView.swift */; };
 		F282E300B5FF7CE32442566A /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00D5D11E54C27CCBA0960448 /* Config.swift */; };
 		F4C589B73616A8B5BC529A98 /* VoiceState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5EAE457C9906B6A456D2D48 /* VoiceState.swift */; };
 /* End PBXBuildFile section */
@@ -39,6 +40,7 @@
 		75BE21884DDAC8E10F4EDFCB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		78439F0D6785C0874C264021 /* Task.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Task.swift; sourceTree = "<group>"; };
 		8CCDEEFF3DADEBCC51030F10 /* VoiceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceView.swift; sourceTree = "<group>"; };
+		A955FC5339920743150036A6 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		B9591C4C54EC4F7124AE2508 /* VoiceOrbView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceOrbView.swift; sourceTree = "<group>"; };
 		BAC6BB8463FA287ED632AE1B /* Person.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Person.swift; sourceTree = "<group>"; };
 		BD736E1729DABA033318794D /* RealtimeAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeAPIClient.swift; sourceTree = "<group>"; };
@@ -95,6 +97,7 @@
 				4B45E0C0F046463E901D90CF /* AuthView.swift */,
 				1CBBA4C145D6716BB9707F68 /* ChatView.swift */,
 				2293BE54AE90FD05E806AAB1 /* MainTabView.swift */,
+				A955FC5339920743150036A6 /* SettingsView.swift */,
 				0D2477154C54FC4FD6E11889 /* TasksView.swift */,
 				B9591C4C54EC4F7124AE2508 /* VoiceOrbView.swift */,
 				8CCDEEFF3DADEBCC51030F10 /* VoiceView.swift */,
@@ -216,6 +219,7 @@
 				ED552C106B5A3A2A11BC4E9E /* PeopleManager.swift in Sources */,
 				AF2E3F7E65C7E864E2FFADE2 /* Person.swift in Sources */,
 				36F954BA5AECB2CE70EAD6AB /* RealtimeAPIClient.swift in Sources */,
+				F0377CA10F15503727AE85FA /* SettingsView.swift in Sources */,
 				69D99FBFA5CADD16244BD637 /* Task.swift in Sources */,
 				B2B3EA9ED52CA3BB433347F8 /* TaskManager.swift in Sources */,
 				DD870AD22053D46299184719 /* TasksView.swift in Sources */,
