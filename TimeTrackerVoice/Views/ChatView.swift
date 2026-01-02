@@ -196,24 +196,38 @@ struct ChatView: View {
             
             HStack(spacing: 12) {
                 // Text input box - WhatsApp style with visible text
-                TextField(L10n.shared.typeMessagePlaceholder, text: $messageText)
-                    .font(.system(size: 16))
-                    .foregroundColor(.white)
-                    .tint(.white)  // Cursor color
-                    .accentColor(.white)  // Selection color
-                    .focused($isInputFocused)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
-                    .background(Color(hex: "2d2d44"))
-                    .cornerRadius(24)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 24)
-                            .stroke(isInputFocused ? Color(hex: "a78bfa") : Color(hex: "4a4a6a"), lineWidth: 2)
-                    )
-                    .submitLabel(.send)
-                    .onSubmit {
-                        sendCurrentMessage()
+                ZStack(alignment: .leading) {
+                    // Background
+                    RoundedRectangle(cornerRadius: 24)
+                        .fill(Color(hex: "2d2d44"))
+                    
+                    // Border
+                    RoundedRectangle(cornerRadius: 24)
+                        .stroke(isInputFocused ? Color(hex: "a78bfa") : Color(hex: "4a4a6a"), lineWidth: 2)
+                    
+                    // Placeholder (only when empty)
+                    if messageText.isEmpty {
+                        Text(L10n.shared.typeMessagePlaceholder)
+                            .font(.system(size: 16))
+                            .foregroundColor(Color(hex: "64748b"))
+                            .padding(.horizontal, 16)
                     }
+                    
+                    // TextField with visible white text
+                    TextField("", text: $messageText)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 16))
+                        .foregroundStyle(Color.white)
+                        .tint(.white)
+                        .focused($isInputFocused)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                        .submitLabel(.send)
+                        .onSubmit {
+                            sendCurrentMessage()
+                        }
+                }
+                .frame(height: 48)
                 
                 // Send button
                 Button(action: sendCurrentMessage) {
