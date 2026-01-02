@@ -482,7 +482,8 @@ struct TaskRowView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "clock")
                                 .font(.system(size: 12))
-                            Text(startTime)
+                            // Format time to show only HH:MM (remove seconds)
+                            Text(formatTimeWithoutSeconds(startTime))
                                 .font(.system(size: 12))
                         }
                         .foregroundColor(Color(hex: "64748b"))
@@ -515,6 +516,17 @@ struct TaskRowView: View {
             .padding(.vertical, 2)
             .background(color.opacity(0.2))
             .cornerRadius(4)
+    }
+    
+    // MARK: - Helpers
+    
+    /// Formats time string from "HH:MM:SS" to "HH:MM"
+    private func formatTimeWithoutSeconds(_ time: String) -> String {
+        let components = time.split(separator: ":")
+        if components.count >= 2 {
+            return "\(components[0]):\(components[1])"
+        }
+        return time
     }
 }
 

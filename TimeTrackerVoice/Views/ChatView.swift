@@ -19,7 +19,7 @@ struct ChatView: View {
     
     var body: some View {
         ZStack {
-            // Background
+            // Background - tap to dismiss keyboard
             LinearGradient(
                 gradient: Gradient(colors: [
                     Color(hex: "1a1a2e"),
@@ -30,6 +30,10 @@ struct ChatView: View {
                 endPoint: .bottom
             )
             .ignoresSafeArea()
+            .onTapGesture {
+                // Dismiss keyboard when tapping background
+                isInputFocused = false
+            }
             
             VStack(spacing: 0) {
                 // Header
@@ -37,6 +41,10 @@ struct ChatView: View {
                 
                 // Messages
                 messagesView
+                    .onTapGesture {
+                        // Dismiss keyboard when tapping messages area
+                        isInputFocused = false
+                    }
                 
                 // Input - with extra padding for tab bar
                 inputView
@@ -177,7 +185,7 @@ struct ChatView: View {
         }
     }
     
-    // MARK: - Input (ChatGPT-style)
+    // MARK: - Input (WhatsApp-style)
     
     private var inputView: some View {
         VStack(spacing: 0) {
@@ -187,35 +195,25 @@ struct ChatView: View {
                 .frame(height: 1)
             
             HStack(spacing: 12) {
-                // Text input box - SIMPLE AND VISIBLE
-                ZStack(alignment: .leading) {
-                    // Placeholder
-                    if messageText.isEmpty {
-                        Text(L10n.typeMessagePlaceholder)
-                            .font(.system(size: 16))
-                            .foregroundColor(Color(hex: "64748b"))
-                            .padding(.horizontal, 16)
+                // Text input box - WhatsApp style with visible text
+                TextField(L10n.shared.typeMessagePlaceholder, text: $messageText)
+                    .font(.system(size: 16))
+                    .foregroundColor(.white)
+                    .tint(.white)  // Cursor color
+                    .accentColor(.white)  // Selection color
+                    .focused($isInputFocused)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                    .background(Color(hex: "2d2d44"))
+                    .cornerRadius(24)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24)
+                            .stroke(isInputFocused ? Color(hex: "a78bfa") : Color(hex: "4a4a6a"), lineWidth: 2)
+                    )
+                    .submitLabel(.send)
+                    .onSubmit {
+                        sendCurrentMessage()
                     }
-                    
-                    // Actual TextField
-                    TextField("", text: $messageText)
-                        .font(.system(size: 16))
-                        .foregroundColor(.white)
-                        .focused($isInputFocused)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
-                        .submitLabel(.send)
-                        .onSubmit {
-                            sendCurrentMessage()
-                        }
-                }
-                .frame(height: 48)
-                .background(Color(hex: "2d2d44"))
-                .cornerRadius(24)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24)
-                        .stroke(isInputFocused ? Color(hex: "a78bfa") : Color(hex: "4a4a6a"), lineWidth: 2)
-                )
                 
                 // Send button
                 Button(action: sendCurrentMessage) {
