@@ -162,6 +162,21 @@ class TaskManager: ObservableObject {
             
             tasks = try JSONDecoder().decode([TaskItem].self, from: data)
             
+            // 🔍 DEBUG: Log task details to find duplicates
+            print("🔍 ===== DEBUG: TASK DATA =====")
+            let workTasks = tasks.filter { $0.title.lowercased().contains("work") }
+            print("🔍 Found \(workTasks.count) 'Work' tasks:")
+            for task in workTasks {
+                print("   📋 Title: \(task.title)")
+                print("      Date: \(task.date)")
+                print("      ID: \(task.id)")
+                print("      isRecurring: \(task.isRecurring)")
+                print("      parentTaskId: \(task.parentTaskId ?? "nil")")
+                print("      status: \(task.status)")
+                print("   ---")
+            }
+            print("🔍 ===== END DEBUG =====")
+            
             // ✅ Save to cache after successful fetch
             saveTasksToCache()
             isOffline = false
