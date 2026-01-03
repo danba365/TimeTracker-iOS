@@ -4,11 +4,23 @@ import SwiftUI
 struct ChatView: View {
     @EnvironmentObject var taskManager: TaskManager
     @StateObject private var chatManager = ChatManager()
+    @StateObject private var keyboardObserver = KeyboardObserver()
     
     @State private var messageText = ""
     @State private var showingAPIKeyAlert = false
     @State private var apiKeyInput = ""
     @FocusState private var isInputFocused: Bool
+    
+    /// Calculate bottom offset: keyboard height or tab bar space
+    private var bottomOffset: CGFloat {
+        if keyboardObserver.keyboardHeight > 0 {
+            // Keyboard visible: offset by keyboard height minus safe area (already accounted)
+            return keyboardObserver.keyboardHeight - 34 // Subtract home indicator
+        } else {
+            // Keyboard hidden: just tab bar space
+            return 80
+        }
+    }
     
     var body: some View {
         ZStack {
@@ -30,16 +42,17 @@ struct ChatView: View {
                     messagesView
                 }
                 
-                // Suggestion cards (hide when keyboard is shown)
-                if !isInputFocused {
+                // Bottom section: Suggestions + Input (slides up with keyboard)
+                VStack(spacing: 0) {
+                    // Suggestion cards - always visible
                     suggestionCardsView
+                    
+                    // Input bar
+                    inputBarView
                 }
-                
-                // Input bar - always visible above keyboard
-                inputBarView
-                    .padding(.bottom, isInputFocused ? 0 : 80) // Tab bar space only when keyboard hidden
+                .padding(.bottom, bottomOffset)
             }
-            .animation(.easeInOut(duration: 0.25), value: isInputFocused)
+            .animation(.easeOut(duration: 0.25), value: keyboardObserver.keyboardHeight)
         }
         .onAppear {
             if Config.openAIAPIKey.isEmpty {
