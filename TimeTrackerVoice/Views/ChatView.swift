@@ -24,12 +24,20 @@ struct ChatView: View {
     
     var body: some View {
         ZStack {
-            // Background (ignore safe areas)
-            Color(hex: "0f0f0f")
-                .ignoresSafeArea()
-                .onTapGesture {
-                    isInputFocused = false
-                }
+            // Background gradient (matches app theme)
+            LinearGradient(
+                colors: [
+                    Color(hex: "1a1a2e"),
+                    Color(hex: "16213e"),
+                    Color(hex: "0f0f23")
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+            .onTapGesture {
+                isInputFocused = false
+            }
             
             VStack(spacing: 0) {
                 // Header
@@ -87,7 +95,6 @@ struct ChatView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(Color(hex: "0f0f0f"))
     }
     
     // MARK: - Empty State (Centered Logo)
@@ -223,16 +230,15 @@ struct ChatView: View {
         .padding(.vertical, 6)
         .background(
             Capsule()
-                .fill(Color(hex: "1a1a1a"))
+                .fill(Color.white.opacity(0.08))
                 .overlay(
                     Capsule()
-                        .stroke(Color(hex: "2f2f2f"), lineWidth: 1)
+                        .stroke(Color(hex: "a78bfa").opacity(0.3), lineWidth: 1)
                 )
         )
         .frame(height: 40)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(Color(hex: "0f0f0f"))
     }
     
     private var canSend: Bool {
@@ -376,17 +382,17 @@ struct SuggestionCard: View {
                 
                 Text(subtitle)
                     .font(.system(size: 12))
-                    .foregroundColor(Color(hex: "8e8ea0"))
+                    .foregroundColor(Color(hex: "94a3b8"))
                     .lineLimit(1)
             }
             .frame(width: 160, alignment: .leading)
             .padding(12)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(hex: "1a1a1a"))
+                    .fill(Color.white.opacity(0.05))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color(hex: "2f2f2f"), lineWidth: 1)
+                            .stroke(Color(hex: "a78bfa").opacity(0.3), lineWidth: 1)
                     )
             )
         }
