@@ -207,55 +207,61 @@ struct ChatView: View {
         }
     }
     
-    // MARK: - Input Bar
+    // MARK: - Input Bar (ChatGPT Style - Compact Pill)
     
     private var inputBarView: some View {
-        HStack(spacing: 12) {
-            // Text field
-            ZStack(alignment: .leading) {
-                RoundedRectangle(cornerRadius: 20)
+        HStack(spacing: 8) {
+            // Plus button (outside field)
+            Button(action: {}) {
+                Image(systemName: "plus")
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundColor(.white)
+                    .frame(width: 36, height: 36)
+            }
+            
+            // Input field with send button inside
+            HStack(spacing: 8) {
+                // Text field
+                TextField(
+                    L10n.shared.currentLanguage == .hebrew ? "הודעה" : "Message",
+                    text: $messageText
+                )
+                .textFieldStyle(.plain)
+                .font(.system(size: 16))
+                .foregroundStyle(Color.white)
+                .tint(.white)
+                .focused($isInputFocused)
+                .submitLabel(.send)
+                .onSubmit { sendCurrentMessage() }
+                
+                // Send button (inside field)
+                Button(action: sendCurrentMessage) {
+                    ZStack {
+                        Circle()
+                            .fill(canSend ? Color.white : Color(hex: "3a3a3a"))
+                            .frame(width: 28, height: 28)
+                        
+                        Image(systemName: "arrow.up")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(canSend ? .black : Color(hex: "6e6e6e"))
+                    }
+                }
+                .disabled(!canSend)
+            }
+            .padding(.leading, 16)
+            .padding(.trailing, 6)
+            .padding(.vertical, 6)
+            .background(
+                Capsule()
                     .fill(Color(hex: "1a1a1a"))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 20)
+                        Capsule()
                             .stroke(Color(hex: "2f2f2f"), lineWidth: 1)
                     )
-                
-                if messageText.isEmpty {
-                    Text(L10n.shared.currentLanguage == .hebrew ? "הודעה" : "Message")
-                        .font(.system(size: 16))
-                        .foregroundColor(Color(hex: "8e8ea0"))
-                        .padding(.horizontal, 16)
-                }
-                
-                TextField("", text: $messageText, axis: .vertical)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 16))
-                    .foregroundStyle(Color.white)
-                    .tint(.white)
-                    .lineLimit(1...5)
-                    .focused($isInputFocused)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .submitLabel(.send)
-                    .onSubmit { sendCurrentMessage() }
-            }
-            .frame(minHeight: 40)
-            
-            // Send button
-            Button(action: sendCurrentMessage) {
-                ZStack {
-                    Circle()
-                        .fill(canSend ? Color.white : Color(hex: "2f2f2f"))
-                        .frame(width: 32, height: 32)
-                    
-                    Image(systemName: "arrow.up")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(canSend ? .black : Color(hex: "8e8ea0"))
-                }
-            }
-            .disabled(!canSend)
+            )
+            .frame(height: 40)
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(Color(hex: "0f0f0f"))
     }
