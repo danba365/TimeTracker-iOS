@@ -682,7 +682,12 @@ class RealtimeAPIClient: NSObject, ObservableObject {
                 return "Missing required fields: first_name and relationship_type"
             }
             
-            let input = CreatePersonInput(
+            // Get user ID for Supabase RLS
+            guard let userId = AuthManager.shared.currentUser?.id else {
+                return "Not authenticated - please log in again"
+            }
+            
+            var input = CreatePersonInput(
                 firstName: firstName,
                 lastName: args["last_name"] as? String,
                 nickname: args["nickname"] as? String,
@@ -693,9 +698,11 @@ class RealtimeAPIClient: NSObject, ObservableObject {
                 birthday: args["birthday"] as? String,
                 notes: args["notes"] as? String
             )
+            input.userId = userId  // Required for Supabase RLS
             
             do {
                 let person = try await peopleManager.createPerson(input)
+                await peopleManager.fetchPeople()  // Refresh contacts list
                 let relationshipInfo = person.relationshipDetail ?? person.relationshipType.rawValue
                 return "✅ Created contact: \(person.fullName) - \(relationshipInfo)"
             } catch {

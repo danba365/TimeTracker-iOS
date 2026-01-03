@@ -103,6 +103,7 @@ struct CreatePersonInput: Codable {
     var birthday: String?
     var anniversary: String?
     var notes: String?
+    var userId: String?  // Required for Supabase RLS
     
     enum CodingKeys: String, CodingKey {
         case nickname, phone, email, birthday, anniversary, notes
@@ -110,6 +111,7 @@ struct CreatePersonInput: Codable {
         case lastName = "last_name"
         case relationshipType = "relationship_type"
         case relationshipDetail = "relationship_detail"
+        case userId = "user_id"
     }
 }
 

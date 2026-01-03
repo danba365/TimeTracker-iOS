@@ -774,7 +774,12 @@ class ChatManager: ObservableObject {
             return isHebrew ? "חסרים פרטי איש קשר" : "Missing contact details"
         }
         
-        let input = CreatePersonInput(
+        // Get user ID for Supabase RLS
+        guard let userId = AuthManager.shared.currentUser?.id else {
+            return isHebrew ? "❌ לא מחובר - אנא התחבר מחדש" : "❌ Not authenticated"
+        }
+        
+        var input = CreatePersonInput(
             firstName: firstName,
             lastName: args["last_name"] as? String,
             nickname: nil,
@@ -785,9 +790,11 @@ class ChatManager: ObservableObject {
             birthday: nil,
             notes: nil
         )
+        input.userId = userId  // Required for Supabase RLS
         
         do {
             let person = try await peopleManager.createPerson(input)
+            await peopleManager.fetchPeople()  // Refresh contacts list
             let name = [person.firstName, person.lastName].compactMap { $0 }.joined(separator: " ")
             return isHebrew
                 ? "✅ איש הקשר '\(name)' נוצר בהצלחה"
