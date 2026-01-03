@@ -846,8 +846,8 @@ class ChatManager: ObservableObject {
         
         var result = isHebrew ? "אירועים (\(events.count)):\n" : "Events (\(events.count)):\n"
         for event in events {
-            let icon = event.icon ?? "📅"
-            let typeLabel = event.eventType.localizedString(isHebrew: isHebrew)
+            let icon = event.displayIcon
+            let typeLabel = event.eventType.displayName
             let yearInfo = event.year != nil ? " (שנת \(event.year!))" : ""
             result += "\(icon) \(event.name) - \(typeLabel)\n"
             result += "   תאריך: \(event.date)\(yearInfo)\n"
