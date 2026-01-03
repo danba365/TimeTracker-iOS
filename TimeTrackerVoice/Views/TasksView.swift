@@ -3,11 +3,48 @@ import SwiftUI
 /// Weekly tasks view displaying tasks organized by day
 struct TasksView: View {
     @EnvironmentObject var taskManager: TaskManager
+    @EnvironmentObject var peopleManager: PeopleManager
     @State private var selectedDate = Date()
     @State private var showingAddTask = false
     @GestureState private var dragOffset: CGFloat = 0
     
     private let calendar = Calendar.current
+    
+    /// Get people with birthdays on the selected date
+    private var birthdaysOnSelectedDate: [Person] {
+        let day = calendar.component(.day, from: selectedDate)
+        let month = calendar.component(.month, from: selectedDate)
+        
+        return peopleManager.people.filter { person in
+            guard let birthdayStr = person.birthday else { return false }
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            guard let birthdayDate = formatter.date(from: birthdayStr) else { return false }
+            
+            let birthdayDay = calendar.component(.day, from: birthdayDate)
+            let birthdayMonth = calendar.component(.month, from: birthdayDate)
+            
+            return birthdayDay == day && birthdayMonth == month
+        }
+    }
+    
+    /// Check if there's a birthday on a given date
+    private func hasBirthdayOnDate(_ date: Date) -> Bool {
+        let day = calendar.component(.day, from: date)
+        let month = calendar.component(.month, from: date)
+        
+        return peopleManager.people.contains { person in
+            guard let birthdayStr = person.birthday else { return false }
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            guard let birthdayDate = formatter.date(from: birthdayStr) else { return false }
+            
+            let birthdayDay = calendar.component(.day, from: birthdayDate)
+            let birthdayMonth = calendar.component(.month, from: birthdayDate)
+            
+            return birthdayDay == day && birthdayMonth == month
+        }
+    }
     
     var body: some View {
         ZStack {
@@ -197,7 +234,8 @@ struct TasksView: View {
                         DayButton(
                             date: date,
                             isSelected: calendar.isDate(date, inSameDayAs: selectedDate),
-                            hasTask: hasTasksOnDate(date)
+                            hasTask: hasTasksOnDate(date),
+                            hasBirthday: hasBirthdayOnDate(date)
                         ) {
                             withAnimation {
                                 selectedDate = date
@@ -252,7 +290,14 @@ struct TasksView: View {
                     .padding(.vertical, 8)
                 }
                 
-                if dayTasks.isEmpty {
+                // 🎂 Birthdays Section
+                if !birthdaysOnSelectedDate.isEmpty {
+                    ForEach(birthdaysOnSelectedDate, id: \.id) { person in
+                        BirthdayRowView(person: person)
+                    }
+                }
+                
+                if dayTasks.isEmpty && birthdaysOnSelectedDate.isEmpty {
                     emptyStateView
                 } else {
                     ForEach(dayTasks, id: \.id) { task in
@@ -409,6 +454,7 @@ struct DayButton: View {
     let date: Date
     let isSelected: Bool
     let hasTask: Bool
+    let hasBirthday: Bool
     let action: () -> Void
     
     private let calendar = Calendar.current
@@ -420,19 +466,33 @@ struct DayButton: View {
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(isSelected ? .white : Color(hex: "64748b"))
                 
-                Text(dayNumber)
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(isSelected ? .white : Color(hex: "94a3b8"))
-                
-                if hasTask {
-                    Circle()
-                        .fill(isSelected ? Color.white : Color(hex: "a78bfa"))
-                        .frame(width: 6, height: 6)
-                } else {
-                    Circle()
-                        .fill(Color.clear)
-                        .frame(width: 6, height: 6)
+                ZStack {
+                    Text(dayNumber)
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(isSelected ? .white : Color(hex: "94a3b8"))
+                    
+                    // Birthday indicator (cake emoji on top-right)
+                    if hasBirthday {
+                        Text("🎂")
+                            .font(.system(size: 10))
+                            .offset(x: 12, y: -8)
+                    }
                 }
+                
+                // Dots for task and birthday
+                HStack(spacing: 3) {
+                    if hasTask {
+                        Circle()
+                            .fill(isSelected ? Color.white : Color(hex: "a78bfa"))
+                            .frame(width: 5, height: 5)
+                    }
+                    if hasBirthday && !hasTask {
+                        Circle()
+                            .fill(isSelected ? Color.white : Color(hex: "f472b6"))
+                            .frame(width: 5, height: 5)
+                    }
+                }
+                .frame(height: 6)
             }
             .frame(width: 44, height: 70)
             .background(
@@ -530,8 +590,88 @@ struct TaskRowView: View {
     }
 }
 
+// MARK: - Birthday Row View
+
+struct BirthdayRowView: View {
+    let person: Person
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Birthday icon
+            ZStack {
+                Circle()
+                    .fill(Color(hex: "f472b6").opacity(0.2))
+                    .frame(width: 44, height: 44)
+                
+                Text("🎂")
+                    .font(.system(size: 22))
+            }
+            
+            // Person info
+            VStack(alignment: .leading, spacing: 4) {
+                Text(birthdayTitle)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
+                
+                HStack(spacing: 8) {
+                    if let relationship = person.relationshipDetail ?? relationshipTypeLabel {
+                        Text(relationship)
+                            .font(.system(size: 12))
+                            .foregroundColor(Color(hex: "f472b6"))
+                    }
+                    
+                    if let age = person.age {
+                        Text(L10n.shared.currentLanguage == .hebrew ? "מלאו \(age + 1)" : "Turning \(age + 1)")
+                            .font(.system(size: 12))
+                            .foregroundColor(Color(hex: "94a3b8"))
+                    }
+                }
+            }
+            
+            Spacer()
+            
+            // Celebration icon
+            Text("🎉")
+                .font(.system(size: 20))
+        }
+        .padding(16)
+        .background(
+            LinearGradient(
+                colors: [Color(hex: "f472b6").opacity(0.15), Color(hex: "a855f7").opacity(0.1)],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color(hex: "f472b6").opacity(0.3), lineWidth: 1)
+        )
+        .cornerRadius(12)
+    }
+    
+    private var birthdayTitle: String {
+        let isHebrew = L10n.shared.currentLanguage == .hebrew
+        let name = person.fullName
+        return isHebrew ? "יום הולדת ל\(name)!" : "\(name)'s Birthday!"
+    }
+    
+    private var relationshipTypeLabel: String? {
+        switch person.relationshipType {
+        case .family:
+            return L10n.shared.currentLanguage == .hebrew ? "משפחה" : "Family"
+        case .friend:
+            return L10n.shared.currentLanguage == .hebrew ? "חבר" : "Friend"
+        case .colleague:
+            return L10n.shared.currentLanguage == .hebrew ? "עמית" : "Colleague"
+        case .other:
+            return nil
+        }
+    }
+}
+
 #Preview {
     TasksView()
         .environmentObject(TaskManager.shared)
+        .environmentObject(PeopleManager.shared)
 }
 
