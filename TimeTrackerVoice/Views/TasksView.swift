@@ -286,7 +286,9 @@ struct TasksView: View {
     // MARK: - Tasks List (with Pull-to-Refresh)
     
     private var tasksListView: some View {
-        let dayTasks = getTasksForSelectedDate()
+        let allItems = getTasksForSelectedDate()
+        let reminders = allItems.filter { $0.taskType == .reminder }
+        let tasks = allItems.filter { $0.taskType == .task }
         
         return ScrollView {
             LazyVStack(spacing: 12) {
@@ -300,6 +302,13 @@ struct TasksView: View {
                             .foregroundColor(Color(hex: "94a3b8"))
                     }
                     .padding(.vertical, 8)
+                }
+                
+                // 🔔 Reminders Section (first, different style)
+                if !reminders.isEmpty {
+                    ForEach(reminders, id: \.id) { reminder in
+                        ReminderRowView(reminder: reminder)
+                    }
                 }
                 
                 // 🎉 Events Section (anniversaries, etc.)
@@ -316,10 +325,11 @@ struct TasksView: View {
                     }
                 }
                 
-                if dayTasks.isEmpty && birthdaysOnSelectedDate.isEmpty && eventsOnSelectedDate.isEmpty {
+                if tasks.isEmpty && reminders.isEmpty && birthdaysOnSelectedDate.isEmpty && eventsOnSelectedDate.isEmpty {
                     emptyStateView
                 } else {
-                    ForEach(dayTasks, id: \.id) { task in
+                    // Regular tasks (after reminders, events, birthdays)
+                    ForEach(tasks, id: \.id) { task in
                         TaskRowView(task: task) {
                             toggleTaskStatus(task)
                         }
@@ -611,6 +621,83 @@ struct TaskRowView: View {
     }
     
     // MARK: - Helpers
+    
+    /// Formats time string from "HH:MM:SS" to "HH:MM"
+    private func formatTimeWithoutSeconds(_ time: String) -> String {
+        let components = time.split(separator: ":")
+        if components.count >= 2 {
+            return "\(components[0]):\(components[1])"
+        }
+        return time
+    }
+}
+
+// MARK: - Reminder Row View
+
+struct ReminderRowView: View {
+    let reminder: TaskItem
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Bell icon (no toggle)
+            ZStack {
+                Circle()
+                    .fill(Color(hex: "06b6d4").opacity(0.2))
+                    .frame(width: 44, height: 44)
+                
+                Image(systemName: "bell.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(Color(hex: "06b6d4"))
+            }
+            
+            // Reminder info
+            VStack(alignment: .leading, spacing: 4) {
+                Text(reminder.title)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.white)
+                
+                HStack(spacing: 8) {
+                    if let startTime = reminder.startTime {
+                        HStack(spacing: 4) {
+                            Image(systemName: "clock")
+                                .font(.system(size: 12))
+                            Text(formatTimeWithoutSeconds(startTime))
+                                .font(.system(size: 12))
+                        }
+                        .foregroundColor(Color(hex: "06b6d4"))
+                    }
+                    
+                    // Show "Reminder" label instead of priority
+                    Text(L10n.reminder)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(Color(hex: "06b6d4"))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color(hex: "06b6d4").opacity(0.2))
+                        .cornerRadius(4)
+                }
+            }
+            
+            Spacer()
+            
+            // Bell icon
+            Text("🔔")
+                .font(.system(size: 18))
+        }
+        .padding(16)
+        .background(
+            LinearGradient(
+                colors: [Color(hex: "06b6d4").opacity(0.15), Color(hex: "0891b2").opacity(0.08)],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color(hex: "06b6d4").opacity(0.3), lineWidth: 1)
+        )
+        .cornerRadius(12)
+    }
     
     /// Formats time string from "HH:MM:SS" to "HH:MM"
     private func formatTimeWithoutSeconds(_ time: String) -> String {

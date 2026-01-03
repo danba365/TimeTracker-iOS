@@ -67,6 +67,7 @@ final class L10n: ObservableObject {
     // MARK: - Tasks View
     var noTasksTitle: String { isHebrew ? "אין משימות ליום זה" : "No tasks for this day" }
     var noTasksSubtitle: String { isHebrew ? "השתמש בקול או בצ'אט להוספת משימות" : "Use voice or chat to add tasks" }
+    var reminder: String { isHebrew ? "תזכורת" : "Reminder" }
     
     // MARK: - Chat View
     var aiAssistant: String { isHebrew ? "עוזר AI" : "AI Assistant" }
@@ -149,6 +150,7 @@ extension L10n {
     // Tasks View
     static var noTasksTitle: String { shared.noTasksTitle }
     static var noTasksSubtitle: String { shared.noTasksSubtitle }
+    static var reminder: String { shared.reminder }
     
     // Chat View
     static var aiAssistant: String { shared.aiAssistant }
