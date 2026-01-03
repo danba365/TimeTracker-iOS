@@ -484,10 +484,14 @@ class ChatManager: ObservableObject {
                 "type": "function",
                 "function": [
                     "name": "get_contacts",
-                    "description": "Get list of contacts, optionally filtered by relationship type",
+                    "description": "Get contacts with full details including birthday, phone, email. Use this when user asks about a specific person or their details.",
                     "parameters": [
                         "type": "object",
                         "properties": [
+                            "name": [
+                                "type": "string",
+                                "description": "Search for a contact by name (first name, last name, or nickname). Use this when asking about a specific person."
+                            ],
                             "relationship_type": [
                                 "type": "string",
                                 "enum": ["family", "friend", "colleague", "other", "all"],
@@ -766,24 +770,107 @@ class ChatManager: ObservableObject {
         let peopleManager = PeopleManager.shared
         
         let filterTypeStr = args["relationship_type"] as? String ?? "all"
+        let searchName = args["name"] as? String
         
         var people = peopleManager.people
+        
+        // Filter by name if provided
+        if let searchName = searchName, !searchName.isEmpty {
+            let searchLower = searchName.lowercased()
+            people = people.filter { person in
+                person.firstName.lowercased().contains(searchLower) ||
+                (person.lastName?.lowercased().contains(searchLower) ?? false) ||
+                (person.nickname?.lowercased().contains(searchLower) ?? false) ||
+                person.fullName.lowercased().contains(searchLower)
+            }
+        }
+        
+        // Filter by relationship type
         if filterTypeStr != "all", let filterType = RelationshipType(rawValue: filterTypeStr) {
             people = peopleManager.getPeopleByType(filterType)
         }
         
         if people.isEmpty {
+            if let searchName = searchName {
+                return isHebrew ? "לא נמצא איש קשר בשם '\(searchName)'" : "No contact found named '\(searchName)'"
+            }
             return isHebrew ? "לא נמצאו אנשי קשר" : "No contacts found"
         }
         
+        // If searching for specific person, return detailed info
+        if searchName != nil && people.count <= 3 {
+            var result = ""
+            for person in people {
+                result += formatPersonDetails(person, isHebrew: isHebrew)
+                result += "\n"
+            }
+            return result
+        }
+        
+        // Otherwise, return list with basic details
         var result = isHebrew ? "אנשי קשר (\(people.count)):\n" : "Contacts (\(people.count)):\n"
         for person in people.prefix(15) {
-            let name = [person.firstName, person.lastName].compactMap { $0 }.joined(separator: " ")
-            let type = person.relationshipType.rawValue
-            result += "• \(name) [\(type)]\n"
+            result += formatPersonSummary(person, isHebrew: isHebrew)
         }
         
         return result
+    }
+    
+    private func formatPersonDetails(_ person: Person, isHebrew: Bool) -> String {
+        var details = isHebrew ? "👤 \(person.fullName)\n" : "👤 \(person.fullName)\n"
+        
+        // Relationship
+        let relationship = person.relationshipDetail ?? person.relationshipType.rawValue
+        details += isHebrew ? "   קשר: \(relationship)\n" : "   Relationship: \(relationship)\n"
+        
+        // Birthday
+        if let birthday = person.birthday {
+            details += isHebrew ? "   🎂 יום הולדת: \(birthday)\n" : "   🎂 Birthday: \(birthday)\n"
+            if let age = person.age {
+                details += isHebrew ? "   גיל: \(age)\n" : "   Age: \(age)\n"
+            }
+            if let daysUntil = person.daysUntilBirthday {
+                if daysUntil == 0 {
+                    details += isHebrew ? "   🎉 יום הולדת היום!\n" : "   🎉 Birthday is today!\n"
+                } else {
+                    details += isHebrew ? "   עוד \(daysUntil) ימים ליום הולדת\n" : "   \(daysUntil) days until birthday\n"
+                }
+            }
+        }
+        
+        // Phone
+        if let phone = person.phone, !phone.isEmpty {
+            details += isHebrew ? "   📞 טלפון: \(phone)\n" : "   📞 Phone: \(phone)\n"
+        }
+        
+        // Email
+        if let email = person.email, !email.isEmpty {
+            details += isHebrew ? "   📧 אימייל: \(email)\n" : "   📧 Email: \(email)\n"
+        }
+        
+        // Notes
+        if let notes = person.notes, !notes.isEmpty {
+            details += isHebrew ? "   📝 הערות: \(notes)\n" : "   📝 Notes: \(notes)\n"
+        }
+        
+        return details
+    }
+    
+    private func formatPersonSummary(_ person: Person, isHebrew: Bool) -> String {
+        var summary = "• \(person.fullName)"
+        
+        if let detail = person.relationshipDetail {
+            summary += " [\(detail)]"
+        } else {
+            summary += " [\(person.relationshipType.rawValue)]"
+        }
+        
+        if let birthday = person.birthday {
+            summary += " 🎂\(birthday)"
+        }
+        
+        summary += "\n"
+        return summary
     }
     
     private func executeCreateContact(args: [String: Any]) async -> String {

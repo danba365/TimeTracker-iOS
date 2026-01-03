@@ -275,10 +275,14 @@ class RealtimeAPIClient: NSObject, ObservableObject {
             [
                 "type": "function",
                 "name": "get_contacts",
-                "description": "Get list of contacts/people, optionally filtered by relationship type",
+                "description": "Get contacts with full details including birthday, phone, email. Use this when user asks about a specific person or their details.",
                 "parameters": [
                     "type": "object",
                     "properties": [
+                        "name": [
+                            "type": "string",
+                            "description": "Search for a contact by name (first name, last name, or nickname). Use this when asking about a specific person."
+                        ],
                         "relationship_type": [
                             "type": "string",
                             "enum": ["family", "friend", "colleague", "other", "all"],
@@ -653,23 +657,80 @@ class RealtimeAPIClient: NSObject, ObservableObject {
             let peopleManager = PeopleManager.shared
             let filterType = args["relationship_type"] as? String ?? "all"
             let includeBirthdays = args["include_birthdays"] as? Bool ?? false
+            let searchName = args["name"] as? String
             
             var filteredPeople = peopleManager.people
+            
+            // Filter by name if provided
+            if let searchName = searchName, !searchName.isEmpty {
+                let searchLower = searchName.lowercased()
+                filteredPeople = filteredPeople.filter { person in
+                    person.firstName.lowercased().contains(searchLower) ||
+                    (person.lastName?.lowercased().contains(searchLower) ?? false) ||
+                    (person.nickname?.lowercased().contains(searchLower) ?? false) ||
+                    person.fullName.lowercased().contains(searchLower)
+                }
+            }
+            
+            // Filter by relationship type
             if filterType != "all", let type = RelationshipType(rawValue: filterType) {
-                filteredPeople = peopleManager.getPeopleByType(type)
+                filteredPeople = filteredPeople.filter { $0.relationshipType == type }
             }
             
             if filteredPeople.isEmpty {
+                if let searchName = searchName {
+                    return "No contact found named '\(searchName)'"
+                }
                 return filterType != "all" 
                     ? "No contacts found of type \(filterType)"
                     : "No contacts found"
             }
             
+            // If searching for specific person, return detailed info
+            if searchName != nil && filteredPeople.count <= 3 {
+                var result = ""
+                for person in filteredPeople {
+                    result += "👤 \(person.fullName)\n"
+                    let relationship = person.relationshipDetail ?? person.relationshipType.rawValue
+                    result += "   Relationship: \(relationship)\n"
+                    
+                    if let birthday = person.birthday {
+                        result += "   🎂 Birthday: \(birthday)\n"
+                        if let age = person.age {
+                            result += "   Age: \(age)\n"
+                        }
+                        if let daysUntil = person.daysUntilBirthday {
+                            if daysUntil == 0 {
+                                result += "   🎉 Birthday is today!\n"
+                            } else {
+                                result += "   \(daysUntil) days until birthday\n"
+                            }
+                        }
+                    }
+                    
+                    if let phone = person.phone, !phone.isEmpty {
+                        result += "   📞 Phone: \(phone)\n"
+                    }
+                    if let email = person.email, !email.isEmpty {
+                        result += "   📧 Email: \(email)\n"
+                    }
+                    if let notes = person.notes, !notes.isEmpty {
+                        result += "   📝 Notes: \(notes)\n"
+                    }
+                    result += "\n"
+                }
+                return result
+            }
+            
+            // Otherwise, return list with basic details
             var result = "Contacts (\(filteredPeople.count)):\n"
             result += filteredPeople.map { person in
                 var info = "• \(person.fullName) - \(person.relationshipType.rawValue)"
                 if let detail = person.relationshipDetail {
                     info += " (\(detail))"
+                }
+                if let birthday = person.birthday {
+                    info += " 🎂\(birthday)"
                 }
                 if includeBirthdays, let days = person.daysUntilBirthday {
                     info += " - Birthday in \(days) days"
