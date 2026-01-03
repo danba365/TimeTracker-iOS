@@ -6,6 +6,7 @@ struct TimeTrackerVoiceApp: App {
     @StateObject private var authManager = AuthManager.shared
     @StateObject private var taskManager = TaskManager.shared
     @StateObject private var peopleManager = PeopleManager.shared
+    @StateObject private var eventManager = EventManager.shared
     
     var body: some Scene {
         WindowGroup {
@@ -14,6 +15,7 @@ struct TimeTrackerVoiceApp: App {
                     .environmentObject(authManager)
                     .environmentObject(taskManager)
                     .environmentObject(peopleManager)
+                    .environmentObject(eventManager)
             } else {
                 AuthView()
                     .environmentObject(authManager)

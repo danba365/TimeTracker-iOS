@@ -4,6 +4,7 @@ import SwiftUI
 struct TasksView: View {
     @EnvironmentObject var taskManager: TaskManager
     @EnvironmentObject var peopleManager: PeopleManager
+    @EnvironmentObject var eventManager: EventManager
     @State private var selectedDate = Date()
     @State private var showingAddTask = false
     @GestureState private var dragOffset: CGFloat = 0
@@ -28,6 +29,11 @@ struct TasksView: View {
         }
     }
     
+    /// Get events on the selected date
+    private var eventsOnSelectedDate: [Event] {
+        eventManager.getEventsForDate(selectedDate)
+    }
+    
     /// Check if there's a birthday on a given date
     private func hasBirthdayOnDate(_ date: Date) -> Bool {
         let day = calendar.component(.day, from: date)
@@ -44,6 +50,11 @@ struct TasksView: View {
             
             return birthdayDay == day && birthdayMonth == month
         }
+    }
+    
+    /// Check if there's an event on a given date
+    private func hasEventOnDate(_ date: Date) -> Bool {
+        eventManager.hasEventOnDate(date)
     }
     
     var body: some View {
@@ -235,7 +246,8 @@ struct TasksView: View {
                             date: date,
                             isSelected: calendar.isDate(date, inSameDayAs: selectedDate),
                             hasTask: hasTasksOnDate(date),
-                            hasBirthday: hasBirthdayOnDate(date)
+                            hasBirthday: hasBirthdayOnDate(date),
+                            hasEvent: hasEventOnDate(date)
                         ) {
                             withAnimation {
                                 selectedDate = date
@@ -290,6 +302,13 @@ struct TasksView: View {
                     .padding(.vertical, 8)
                 }
                 
+                // 🎉 Events Section (anniversaries, etc.)
+                if !eventsOnSelectedDate.isEmpty {
+                    ForEach(eventsOnSelectedDate, id: \.id) { event in
+                        EventRowView(event: event)
+                    }
+                }
+                
                 // 🎂 Birthdays Section
                 if !birthdaysOnSelectedDate.isEmpty {
                     ForEach(birthdaysOnSelectedDate, id: \.id) { person in
@@ -297,7 +316,7 @@ struct TasksView: View {
                     }
                 }
                 
-                if dayTasks.isEmpty && birthdaysOnSelectedDate.isEmpty {
+                if dayTasks.isEmpty && birthdaysOnSelectedDate.isEmpty && eventsOnSelectedDate.isEmpty {
                     emptyStateView
                 } else {
                     ForEach(dayTasks, id: \.id) { task in
@@ -323,6 +342,7 @@ struct TasksView: View {
         await taskManager.fetchTasks()
         await taskManager.fetchCategories()
         await PeopleManager.shared.fetchPeople()
+        await eventManager.fetchEvents()
         print("✅ Refresh complete")
     }
     
@@ -455,6 +475,7 @@ struct DayButton: View {
     let isSelected: Bool
     let hasTask: Bool
     let hasBirthday: Bool
+    let hasEvent: Bool
     let action: () -> Void
     
     private let calendar = Calendar.current
@@ -477,19 +498,30 @@ struct DayButton: View {
                             .font(.system(size: 10))
                             .offset(x: 12, y: -8)
                     }
+                    // Event indicator (if no birthday)
+                    else if hasEvent {
+                        Text("💍")
+                            .font(.system(size: 10))
+                            .offset(x: 12, y: -8)
+                    }
                 }
                 
-                // Dots for task and birthday
-                HStack(spacing: 3) {
+                // Dots for task, birthday, event
+                HStack(spacing: 2) {
                     if hasTask {
                         Circle()
                             .fill(isSelected ? Color.white : Color(hex: "a78bfa"))
-                            .frame(width: 5, height: 5)
+                            .frame(width: 4, height: 4)
                     }
-                    if hasBirthday && !hasTask {
+                    if hasBirthday {
                         Circle()
                             .fill(isSelected ? Color.white : Color(hex: "f472b6"))
-                            .frame(width: 5, height: 5)
+                            .frame(width: 4, height: 4)
+                    }
+                    if hasEvent && !hasBirthday {
+                        Circle()
+                            .fill(isSelected ? Color.white : Color(hex: "fbbf24"))
+                            .frame(width: 4, height: 4)
                     }
                 }
                 .frame(height: 6)
@@ -669,9 +701,79 @@ struct BirthdayRowView: View {
     }
 }
 
+// MARK: - Event Row View
+
+struct EventRowView: View {
+    let event: Event
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Event icon
+            ZStack {
+                Circle()
+                    .fill(eventColor.opacity(0.2))
+                    .frame(width: 44, height: 44)
+                
+                Text(event.displayIcon)
+                    .font(.system(size: 22))
+            }
+            
+            // Event info
+            VStack(alignment: .leading, spacing: 4) {
+                Text(event.name)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
+                
+                HStack(spacing: 8) {
+                    Text(event.eventType.displayName)
+                        .font(.system(size: 12))
+                        .foregroundColor(eventColor)
+                    
+                    if let years = event.yearsSince, years > 0 {
+                        Text(L10n.shared.currentLanguage == .hebrew ? "\(years) שנים" : "\(years) years")
+                            .font(.system(size: 12))
+                            .foregroundColor(Color(hex: "94a3b8"))
+                    }
+                }
+            }
+            
+            Spacer()
+            
+            // Celebration icon
+            Text("🎊")
+                .font(.system(size: 20))
+        }
+        .padding(16)
+        .background(
+            LinearGradient(
+                colors: [eventColor.opacity(0.15), eventColor.opacity(0.05)],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(eventColor.opacity(0.3), lineWidth: 1)
+        )
+        .cornerRadius(12)
+    }
+    
+    private var eventColor: Color {
+        switch event.eventType {
+        case .birthday:
+            return Color(hex: "f472b6")  // Pink
+        case .anniversary:
+            return Color(hex: "fbbf24")  // Gold/Yellow
+        case .custom:
+            return Color(hex: "60a5fa")  // Blue
+        }
+    }
+}
+
 #Preview {
     TasksView()
         .environmentObject(TaskManager.shared)
         .environmentObject(PeopleManager.shared)
+        .environmentObject(EventManager.shared)
 }
 

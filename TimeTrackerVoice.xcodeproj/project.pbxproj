@@ -3,10 +3,11 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 63;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
+		074830BC46C4B4C9BF728030 /* EventManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18540623942D6EA0151F7DF0 /* EventManager.swift */; };
 		265D0B7AEB713522D3281186 /* VoiceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CCDEEFF3DADEBCC51030F10 /* VoiceView.swift */; };
 		36F954BA5AECB2CE70EAD6AB /* RealtimeAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD736E1729DABA033318794D /* RealtimeAPIClient.swift */; };
 		449FDE63FAD45B47FB34141E /* KeyboardObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93AEE3C5DF82B5247400C763 /* KeyboardObserver.swift */; };
@@ -24,6 +25,7 @@
 		CDC44DD0190828061EA22FDA /* TimeTrackerVoiceApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8C3C8D017C28EC1FC41A04C /* TimeTrackerVoiceApp.swift */; };
 		D3CE25E03C1A76C43FE3D1EB /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D3FD0263B3A11FBBA221B23 /* AuthManager.swift */; };
 		DD870AD22053D46299184719 /* TasksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D2477154C54FC4FD6E11889 /* TasksView.swift */; };
+		E6F13AE35B81826443F360FE /* Event.swift in Sources */ = {isa = PBXBuildFile; fileRef = 516A5D11831B35E6661F3CE8 /* Event.swift */; };
 		ED552C106B5A3A2A11BC4E9E /* PeopleManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BF30D6DDB242B2ABF1DB321 /* PeopleManager.swift */; };
 		F0377CA10F15503727AE85FA /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A955FC5339920743150036A6 /* SettingsView.swift */; };
 		F282E300B5FF7CE32442566A /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00D5D11E54C27CCBA0960448 /* Config.swift */; };
@@ -33,12 +35,14 @@
 /* Begin PBXFileReference section */
 		00D5D11E54C27CCBA0960448 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
 		0D2477154C54FC4FD6E11889 /* TasksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksView.swift; sourceTree = "<group>"; };
+		18540623942D6EA0151F7DF0 /* EventManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventManager.swift; sourceTree = "<group>"; };
 		1CBBA4C145D6716BB9707F68 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		2293BE54AE90FD05E806AAB1 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		2BF30D6DDB242B2ABF1DB321 /* PeopleManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeopleManager.swift; sourceTree = "<group>"; };
 		2D3FD0263B3A11FBBA221B23 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
 		4B45E0C0F046463E901D90CF /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
 		4FDA47019FA9E3F0535A5A64 /* PromptManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptManager.swift; sourceTree = "<group>"; };
+		516A5D11831B35E6661F3CE8 /* Event.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Event.swift; sourceTree = "<group>"; };
 		53EA97FB722407D2230B4B9C /* AudioStreamManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioStreamManager.swift; sourceTree = "<group>"; };
 		75BE21884DDAC8E10F4EDFCB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		78439F0D6785C0874C264021 /* Task.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Task.swift; sourceTree = "<group>"; };
@@ -48,7 +52,7 @@
 		B9591C4C54EC4F7124AE2508 /* VoiceOrbView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceOrbView.swift; sourceTree = "<group>"; };
 		BAC6BB8463FA287ED632AE1B /* Person.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Person.swift; sourceTree = "<group>"; };
 		BD736E1729DABA033318794D /* RealtimeAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeAPIClient.swift; sourceTree = "<group>"; };
-		CC05BCE24353DA1B7E0F2DD0 /* TimeTrackerVoice.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TimeTrackerVoice.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		CC05BCE24353DA1B7E0F2DD0 /* TimeTrackerVoice.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TimeTrackerVoice.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D8C3C8D017C28EC1FC41A04C /* TimeTrackerVoiceApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeTrackerVoiceApp.swift; sourceTree = "<group>"; };
 		E5EAE457C9906B6A456D2D48 /* VoiceState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceState.swift; sourceTree = "<group>"; };
 		E740B278B8A2ECB42B6AEFE7 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
@@ -113,6 +117,7 @@
 		8A5DFE08CEF31543ECEEE00B /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				516A5D11831B35E6661F3CE8 /* Event.swift */,
 				BAC6BB8463FA287ED632AE1B /* Person.swift */,
 				78439F0D6785C0874C264021 /* Task.swift */,
 				E5EAE457C9906B6A456D2D48 /* VoiceState.swift */,
@@ -125,6 +130,7 @@
 			children = (
 				53EA97FB722407D2230B4B9C /* AudioStreamManager.swift */,
 				2D3FD0263B3A11FBBA221B23 /* AuthManager.swift */,
+				18540623942D6EA0151F7DF0 /* EventManager.swift */,
 				2BF30D6DDB242B2ABF1DB321 /* PeopleManager.swift */,
 				4FDA47019FA9E3F0535A5A64 /* PromptManager.swift */,
 				BD736E1729DABA033318794D /* RealtimeAPIClient.swift */,
@@ -191,6 +197,7 @@
 				LastUpgradeCheck = 1500;
 				TargetAttributes = {
 					1C8B1DDA81592BF79253736C = {
+						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -208,6 +215,7 @@
 			packageReferences = (
 				2E1E3F64CA3F9419B1801686 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 			);
+			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -226,6 +234,8 @@
 				96F45E29A73F59EEBF2115DE /* AuthView.swift in Sources */,
 				747020AB23CEDE8553123EA3 /* ChatView.swift in Sources */,
 				F282E300B5FF7CE32442566A /* Config.swift in Sources */,
+				E6F13AE35B81826443F360FE /* Event.swift in Sources */,
+				074830BC46C4B4C9BF728030 /* EventManager.swift in Sources */,
 				449FDE63FAD45B47FB34141E /* KeyboardObserver.swift in Sources */,
 				4F7F7EBEFACCE6366F5CC214 /* L10n.swift in Sources */,
 				9A430235AECA4C69410072E4 /* MainTabView.swift in Sources */,
@@ -254,7 +264,6 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_ASSET_PATHS = "";
-				DEVELOPMENT_TEAM = XDV2Z49DGX;
 				INFOPLIST_FILE = TimeTrackerVoice/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -400,7 +409,6 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_ASSET_PATHS = "";
-				DEVELOPMENT_TEAM = XDV2Z49DGX;
 				INFOPLIST_FILE = TimeTrackerVoice/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

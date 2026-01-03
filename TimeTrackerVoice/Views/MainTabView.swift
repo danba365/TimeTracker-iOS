@@ -5,6 +5,7 @@ struct MainTabView: View {
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var taskManager: TaskManager
     @EnvironmentObject var peopleManager: PeopleManager
+    @EnvironmentObject var eventManager: EventManager
     @ObservedObject private var l10n = L10n.shared
     
     @State private var selectedTab: Tab = .tasks
@@ -29,12 +30,19 @@ struct MainTabView: View {
             .environmentObject(authManager)
             .environmentObject(taskManager)
             .environmentObject(peopleManager)
+            .environmentObject(eventManager)
             
             // Tab Bar
             CustomTabBar(selectedTab: $selectedTab)
         }
         .ignoresSafeArea(.keyboard)
         .environment(\.layoutDirection, l10n.currentLanguage.isRTL ? .rightToLeft : .leftToRight)
+        .onAppear {
+            // Fetch events on app launch
+            Task {
+                await eventManager.fetchEvents()
+            }
+        }
     }
 }
 
@@ -120,5 +128,6 @@ struct TabBarButton: View {
         .environmentObject(AuthManager.shared)
         .environmentObject(TaskManager.shared)
         .environmentObject(PeopleManager.shared)
+        .environmentObject(EventManager.shared)
 }
 
