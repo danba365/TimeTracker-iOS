@@ -466,14 +466,19 @@ class ChatManager: ObservableObject {
                 "type": "function",
                 "function": [
                     "name": "create_task",
-                    "description": "Create a new task",
+                    "description": "Create a new task or reminder. Use 'reminder' type when user says 'תזכורת', 'להזכיר', 'remind me', or asks to be reminded about something.",
                     "parameters": [
                         "type": "object",
                         "properties": [
-                            "title": ["type": "string", "description": "Task title"],
+                            "title": ["type": "string", "description": "Task/reminder title"],
                             "date": ["type": "string", "description": "Date in YYYY-MM-DD format"],
                             "start_time": ["type": "string", "description": "Start time in HH:MM format (optional)"],
                             "end_time": ["type": "string", "description": "End time in HH:MM format (optional)"],
+                            "task_type": [
+                                "type": "string",
+                                "enum": ["task", "reminder"],
+                                "description": "Type: 'task' for regular tasks, 'reminder' for reminders (תזכורת). Default is 'task'."
+                            ],
                             "notes": ["type": "string", "description": "Additional notes (optional)"]
                         ],
                         "required": ["title", "date"]
@@ -558,36 +563,40 @@ class ChatManager: ObservableObject {
         let isHebrew = L10n.shared.currentLanguage == .hebrew
         
         let systemPrompt = isHebrew ? """
-        אתה עוזר AI ידידותי לאפליקציית TimeTracker. עזור למשתמשים לנהל משימות, אנשי קשר ואירועים.
+        אתה עוזר AI ידידותי לאפליקציית TimeTracker. עזור למשתמשים לנהל משימות, תזכורות, אנשי קשר ואירועים.
         היה תמציתי וידידותי. דבר בעברית.
         
         תאריך נוכחי: \(Date().formatted(date: .complete, time: .omitted))
         
         יש לך גישה לכלים הבאים:
         - get_tasks: קבל משימות לתאריך או טווח תאריכים
-        - create_task: צור משימה חדשה
+        - create_task: צור משימה או תזכורת חדשה
+          * השתמש ב-task_type: "task" למשימות רגילות
+          * השתמש ב-task_type: "reminder" לתזכורות (כשהמשתמש אומר "תזכורת", "להזכיר", "תזכיר לי")
         - get_contacts: קבל רשימת אנשי קשר
         - create_contact: צור איש קשר חדש
         - get_events: קבל אירועים שנתיים כמו ימי נישואין, ימי הולדת ואירועים מותאמים
         
-        השתמש ב-get_events כאשר המשתמש שואל על ימי נישואין או תאריכים מיוחדים!
+        חשוב: כשהמשתמש מבקש תזכורת, השתמש ב-task_type: "reminder"!
         
         הקשר המשימות הנוכחי:
         \(taskContext)
         """ : """
-        You are a helpful AI assistant for TimeTracker. Help users manage tasks, contacts, and events.
+        You are a helpful AI assistant for TimeTracker. Help users manage tasks, reminders, contacts, and events.
         Be concise and friendly.
         
         Current date: \(Date().formatted(date: .complete, time: .omitted))
         
         You have access to these tools:
         - get_tasks: Get tasks for a date or date range
-        - create_task: Create a new task
+        - create_task: Create a new task or reminder
+          * Use task_type: "task" for regular tasks
+          * Use task_type: "reminder" for reminders (when user says "remind me", "reminder", "תזכורת")
         - get_contacts: Get list of contacts
         - create_contact: Create a new contact
         - get_events: Get recurring events like anniversaries, birthdays, and custom events
         
-        Use get_events when user asks about anniversaries or special dates!
+        Important: When user asks for a reminder, use task_type: "reminder"!
         
         Current task context:
         \(taskContext)
@@ -746,8 +755,14 @@ class ChatManager: ObservableObject {
             return isHebrew ? "❌ לא מחובר - אנא התחבר מחדש" : "❌ Not authenticated"
         }
         
+        // Determine task type (task or reminder)
+        let taskTypeStr = args["task_type"] as? String ?? "task"
+        let taskType: TaskType = taskTypeStr == "reminder" ? .reminder : .task
+        let isReminder = taskType == .reminder
+        
         var input = CreateTaskInput(title: title, date: date)
         input.userId = userId
+        input.taskType = taskType
         input.startTime = args["start_time"] as? String
         input.endTime = args["end_time"] as? String
         if let notes = args["notes"] as? String {
@@ -757,9 +772,16 @@ class ChatManager: ObservableObject {
         do {
             let task = try await taskManager.createTask(input)
             await taskManager.fetchTasks()
-            return isHebrew
-                ? "✅ המשימה '\(task.title)' נוצרה בהצלחה לתאריך \(task.date)"
-                : "✅ Task '\(task.title)' created for \(task.date)"
+            
+            if isReminder {
+                return isHebrew
+                    ? "🔔 התזכורת '\(task.title)' נוצרה בהצלחה לתאריך \(task.date)"
+                    : "🔔 Reminder '\(task.title)' created for \(task.date)"
+            } else {
+                return isHebrew
+                    ? "✅ המשימה '\(task.title)' נוצרה בהצלחה לתאריך \(task.date)"
+                    : "✅ Task '\(task.title)' created for \(task.date)"
+            }
         } catch {
             return isHebrew ? "❌ שגיאה: \(error.localizedDescription)" : "❌ Error: \(error.localizedDescription)"
         }

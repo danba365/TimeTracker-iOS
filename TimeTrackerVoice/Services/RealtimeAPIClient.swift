@@ -233,13 +233,18 @@ class RealtimeAPIClient: NSObject, ObservableObject {
             [
                 "type": "function",
                 "name": "create_task",
-                "description": "Create a new task",
+                "description": "Create a new task or reminder. Use 'reminder' type when user says 'תזכורת', 'להזכיר', 'remind me', or asks to be reminded about something.",
                 "parameters": [
                     "type": "object",
                     "properties": [
-                        "title": ["type": "string", "description": "Task title"],
+                        "title": ["type": "string", "description": "Task/reminder title"],
                         "date": ["type": "string", "description": "Date in YYYY-MM-DD format"],
                         "start_time": ["type": "string", "description": "Start time in HH:MM format"],
+                        "task_type": [
+                            "type": "string",
+                            "enum": ["task", "reminder"],
+                            "description": "Type: 'task' for regular tasks, 'reminder' for reminders (תזכורת). Default is 'task'."
+                        ],
                         "priority": ["type": "string", "enum": ["low", "medium", "high"]]
                     ],
                     "required": ["title", "date"]
@@ -582,6 +587,11 @@ class RealtimeAPIClient: NSObject, ObservableObject {
                 return "Not authenticated - please log in again"
             }
             
+            // Determine task type (task or reminder)
+            let taskTypeStr = args["task_type"] as? String ?? "task"
+            let taskType: TaskType = taskTypeStr == "reminder" ? .reminder : .task
+            let isReminder = taskType == .reminder
+            
             var input = CreateTaskInput(
                 title: title,
                 date: date,
@@ -589,13 +599,19 @@ class RealtimeAPIClient: NSObject, ObservableObject {
                 priority: Priority(rawValue: args["priority"] as? String ?? "medium") ?? .medium
             )
             input.userId = userId  // Set the user_id for Supabase RLS
+            input.taskType = taskType
             
             do {
                 let task = try await taskManager.createTask(input)
                 // Refresh tasks to show the new task in the list
                 await taskManager.fetchTasks()
                 let time = task.startTime.map { " at \($0)" } ?? ""
-                return "Created task: \(task.title) for \(task.date)\(time)"
+                
+                if isReminder {
+                    return "🔔 Created reminder: \(task.title) for \(task.date)\(time)"
+                } else {
+                    return "✅ Created task: \(task.title) for \(task.date)\(time)"
+                }
             } catch {
                 print("❌ Create task error: \(error)")
                 return "Failed to create task: \(error.localizedDescription)"
