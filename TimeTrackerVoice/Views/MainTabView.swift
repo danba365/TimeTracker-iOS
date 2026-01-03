@@ -11,7 +11,7 @@ struct MainTabView: View {
     @State private var selectedTab: Tab = .tasks
     
     enum Tab {
-        case tasks, chat, voice
+        case tasks, chat, voice, contacts
     }
     
     var body: some View {
@@ -25,6 +25,8 @@ struct MainTabView: View {
                     ChatView()
                 case .voice:
                     VoiceView()
+                case .contacts:
+                    ContactsView()
                 }
             }
             .environmentObject(authManager)
@@ -75,6 +77,14 @@ struct CustomTabBar: View {
                 isSelected: selectedTab == .voice
             ) {
                 selectedTab = .voice
+            }
+            
+            TabBarButton(
+                icon: "person.2",
+                label: L10n.tabContacts,
+                isSelected: selectedTab == .contacts
+            ) {
+                selectedTab = .contacts
             }
         }
         .padding(.top, 12)

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		055B6BC52A2591569642868F /* ContactsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AB28059F207891C60A96719 /* ContactsView.swift */; };
 		074830BC46C4B4C9BF728030 /* EventManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18540623942D6EA0151F7DF0 /* EventManager.swift */; };
 		265D0B7AEB713522D3281186 /* VoiceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CCDEEFF3DADEBCC51030F10 /* VoiceView.swift */; };
 		36F954BA5AECB2CE70EAD6AB /* RealtimeAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD736E1729DABA033318794D /* RealtimeAPIClient.swift */; };
@@ -46,6 +47,7 @@
 		53EA97FB722407D2230B4B9C /* AudioStreamManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioStreamManager.swift; sourceTree = "<group>"; };
 		75BE21884DDAC8E10F4EDFCB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		78439F0D6785C0874C264021 /* Task.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Task.swift; sourceTree = "<group>"; };
+		8AB28059F207891C60A96719 /* ContactsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsView.swift; sourceTree = "<group>"; };
 		8CCDEEFF3DADEBCC51030F10 /* VoiceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceView.swift; sourceTree = "<group>"; };
 		93AEE3C5DF82B5247400C763 /* KeyboardObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardObserver.swift; sourceTree = "<group>"; };
 		A955FC5339920743150036A6 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -105,6 +107,7 @@
 			children = (
 				4B45E0C0F046463E901D90CF /* AuthView.swift */,
 				1CBBA4C145D6716BB9707F68 /* ChatView.swift */,
+				8AB28059F207891C60A96719 /* ContactsView.swift */,
 				2293BE54AE90FD05E806AAB1 /* MainTabView.swift */,
 				A955FC5339920743150036A6 /* SettingsView.swift */,
 				0D2477154C54FC4FD6E11889 /* TasksView.swift */,
@@ -234,6 +237,7 @@
 				96F45E29A73F59EEBF2115DE /* AuthView.swift in Sources */,
 				747020AB23CEDE8553123EA3 /* ChatView.swift in Sources */,
 				F282E300B5FF7CE32442566A /* Config.swift in Sources */,
+				055B6BC52A2591569642868F /* ContactsView.swift in Sources */,
 				E6F13AE35B81826443F360FE /* Event.swift in Sources */,
 				074830BC46C4B4C9BF728030 /* EventManager.swift in Sources */,
 				449FDE63FAD45B47FB34141E /* KeyboardObserver.swift in Sources */,
