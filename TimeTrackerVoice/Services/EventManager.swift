@@ -195,8 +195,30 @@ class EventManager: ObservableObject {
     // MARK: - Helpers
     
     /// Get events that occur on a specific date (matches day and month)
+    /// Deduplicates by name to avoid showing duplicate entries
     func getEventsForDate(_ date: Date) -> [Event] {
-        return events.filter { $0.occursOn(date: date) }
+        let matchingEvents = events.filter { $0.occursOn(date: date) }
+        
+        // Deduplicate by name (keep the one with year info if available)
+        var seenNames = Set<String>()
+        var uniqueEvents: [Event] = []
+        
+        for event in matchingEvents {
+            let key = event.name.lowercased()
+            if !seenNames.contains(key) {
+                seenNames.insert(key)
+                uniqueEvents.append(event)
+            } else {
+                // If we already have this event, prefer the one with year info
+                if let existingIndex = uniqueEvents.firstIndex(where: { $0.name.lowercased() == key }) {
+                    if uniqueEvents[existingIndex].year == nil && event.year != nil {
+                        uniqueEvents[existingIndex] = event
+                    }
+                }
+            }
+        }
+        
+        return uniqueEvents
     }
     
     /// Check if there's an event on a specific date
