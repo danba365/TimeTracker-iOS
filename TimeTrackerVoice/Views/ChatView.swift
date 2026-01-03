@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Text-based AI chat view with Hebrew RTL support
+/// ChatGPT-style AI chat view with Hebrew RTL support
 struct ChatView: View {
     @EnvironmentObject var taskManager: TaskManager
     @StateObject private var chatManager = ChatManager()
@@ -8,286 +8,440 @@ struct ChatView: View {
     @State private var messageText = ""
     @State private var showingAPIKeyAlert = false
     @State private var apiKeyInput = ""
+    @State private var textEditorHeight: CGFloat = 44
     @FocusState private var isInputFocused: Bool
     
-    // Detect if text is RTL (Hebrew/Arabic)
-    private var isRTL: Bool {
-        guard let firstChar = messageText.first else { return false }
-        let language = CFStringTokenizerCopyBestStringLanguage(messageText as CFString, CFRange(location: 0, length: messageText.count))
-        return language as String? == "he" || language as String? == "ar" || firstChar.isHebrewOrArabic
-    }
+    private let maxTextEditorHeight: CGFloat = 120
+    private let minTextEditorHeight: CGFloat = 44
     
     var body: some View {
-        ZStack {
-            // Background - tap to dismiss keyboard
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color(hex: "1a1a2e"),
-                    Color(hex: "16213e"),
-                    Color(hex: "0f0f23")
-                ]),
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
-            .onTapGesture {
-                // Dismiss keyboard when tapping background
-                isInputFocused = false
-            }
-            
-            VStack(spacing: 0) {
-                // Header
-                headerView
-                
-                // Messages
-                messagesView
+        GeometryReader { geometry in
+            ZStack {
+                // Background
+                Color(hex: "0f0f0f")
+                    .ignoresSafeArea()
                     .onTapGesture {
-                        // Dismiss keyboard when tapping messages area
                         isInputFocused = false
                     }
                 
-                // Input - with extra padding for tab bar
-                inputView
-                
-                // Space for tab bar (approximately 80 points)
-                Color.clear
-                    .frame(height: 80)
+                VStack(spacing: 0) {
+                    // Header
+                    chatHeader
+                    
+                    // Messages or Welcome
+                    if chatManager.messages.isEmpty {
+                        welcomeScreen
+                    } else {
+                        messagesScrollView
+                    }
+                    
+                    // Input area
+                    inputArea
+                    
+                    // Tab bar spacer
+                    Color.clear.frame(height: 80)
+                }
             }
         }
         .onAppear {
-            checkAPIKey()
-        }
-        .alert("OpenAI API Key", isPresented: $showingAPIKeyAlert) {
-            TextField("API Key", text: $apiKeyInput)
-            Button("Save") {
-                Config.setOpenAIAPIKey(apiKeyInput)
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Enter your OpenAI API key to enable AI chat features.")
-        }
-    }
-    
-    // MARK: - Header
-    
-    private var headerView: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(L10n.aiAssistant)
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.white)
-                Text(L10n.askMeAboutTasks)
-                    .font(.system(size: 14))
-                    .foregroundColor(Color(hex: "94a3b8"))
-            }
-            
-            Spacer()
-            
-            Menu {
-                Button(L10n.setAPIKey) {
+            if Config.openAIAPIKey.isEmpty {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                     showingAPIKeyAlert = true
                 }
-                Button(L10n.clearChat, role: .destructive) {
-                    chatManager.clearMessages()
+            }
+        }
+        .alert(L10n.shared.enterAPIKey, isPresented: $showingAPIKeyAlert) {
+            TextField(L10n.shared.apiKeyPlaceholder, text: $apiKeyInput)
+            Button(L10n.shared.save) {
+                Config.setOpenAIAPIKey(apiKeyInput)
+            }
+            Button(L10n.shared.cancel, role: .cancel) {}
+        } message: {
+            Text(L10n.shared.currentLanguage == .hebrew 
+                 ? "הזן את מפתח ה-API של OpenAI כדי להפעיל תכונות AI"
+                 : "Enter your OpenAI API key to enable AI features")
+        }
+    }
+    
+    // MARK: - Header (Minimal ChatGPT-style)
+    
+    private var chatHeader: some View {
+        HStack {
+            // AI Model indicator
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(Color(hex: "10a37f"))
+                
+                Text("GPT-4o")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
+                
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(Color(hex: "8e8ea0"))
+            }
+            
+            Spacer()
+            
+            // Menu button
+            Menu {
+                Button(action: { showingAPIKeyAlert = true }) {
+                    Label(L10n.shared.setAPIKey, systemImage: "key")
+                }
+                Button(role: .destructive, action: { chatManager.clearMessages() }) {
+                    Label(L10n.shared.clearChat, systemImage: "trash")
                 }
             } label: {
-                Image(systemName: "ellipsis.circle")
-                    .font(.system(size: 24))
-                    .foregroundColor(Color(hex: "94a3b8"))
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundColor(Color(hex: "8e8ea0"))
+                    .frame(width: 40, height: 40)
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 20)
-        .padding(.bottom, 16)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color(hex: "0f0f0f"))
     }
     
-    // MARK: - Messages
+    // MARK: - Welcome Screen (ChatGPT-style)
     
-    private var messagesView: some View {
+    private var welcomeScreen: some View {
+        ScrollView {
+            VStack(spacing: 32) {
+                Spacer().frame(height: 60)
+                
+                // Logo
+                ZStack {
+                    Circle()
+                        .fill(Color(hex: "10a37f"))
+                        .frame(width: 60, height: 60)
+                    
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 28, weight: .medium))
+                        .foregroundColor(.white)
+                }
+                
+                // Title
+                Text(L10n.shared.howCanIHelp)
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.center)
+                
+                // Suggestion cards
+                VStack(spacing: 12) {
+                    suggestionCard(
+                        icon: "calendar",
+                        title: L10n.shared.suggestionWhatToday,
+                        action: { sendMessage(L10n.shared.suggestionWhatToday) }
+                    )
+                    
+                    suggestionCard(
+                        icon: "plus.circle",
+                        title: L10n.shared.suggestionAddTask,
+                        action: { sendMessage(L10n.shared.suggestionAddTaskFull) }
+                    )
+                    
+                    suggestionCard(
+                        icon: "person.2",
+                        title: L10n.shared.currentLanguage == .hebrew ? "מי באנשי הקשר שלי?" : "Who's in my contacts?",
+                        action: { sendMessage(L10n.shared.currentLanguage == .hebrew ? "מי באנשי הקשר שלי?" : "Who's in my contacts?") }
+                    )
+                }
+                .padding(.horizontal, 24)
+                
+                Spacer()
+            }
+        }
+        .onTapGesture {
+            isInputFocused = false
+        }
+    }
+    
+    private func suggestionCard(icon: String, title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 18))
+                    .foregroundColor(Color(hex: "8e8ea0"))
+                    .frame(width: 24)
+                
+                Text(title)
+                    .font(.system(size: 15))
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.leading)
+                
+                Spacer()
+                
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 14))
+                    .foregroundColor(Color(hex: "8e8ea0"))
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(hex: "1a1a1a"))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color(hex: "2f2f2f"), lineWidth: 1)
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+    }
+    
+    // MARK: - Messages (ChatGPT-style)
+    
+    private var messagesScrollView: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(spacing: 16) {
-                    if chatManager.messages.isEmpty {
-                        welcomeView
-                    } else {
-                        ForEach(chatManager.messages) { message in
-                            MessageBubble(message: message)
-                                .id(message.id)
-                        }
-                        
-                        if chatManager.isLoading {
-                            HStack {
-                                TypingIndicator()
-                                Spacer()
-                            }
-                            .padding(.horizontal, 20)
-                        }
+                LazyVStack(spacing: 0) {
+                    ForEach(chatManager.messages) { message in
+                        ChatGPTMessageRow(message: message)
+                            .id(message.id)
+                    }
+                    
+                    if chatManager.isLoading {
+                        ChatGPTTypingRow()
+                            .id("typing")
                     }
                 }
-                .padding(.horizontal, 20)
                 .padding(.bottom, 20)
             }
-            .refreshable {
-                // Refresh tasks data for chat context
-                await taskManager.fetchTasks()
-            }
             .onChange(of: chatManager.messages.count) { _, _ in
-                if let lastMessage = chatManager.messages.last {
-                    withAnimation {
-                        proxy.scrollTo(lastMessage.id, anchor: .bottom)
-                    }
+                scrollToBottom(proxy: proxy)
+            }
+            .onChange(of: chatManager.isLoading) { _, _ in
+                scrollToBottom(proxy: proxy)
+            }
+            .onTapGesture {
+                isInputFocused = false
+            }
+        }
+    }
+    
+    private func scrollToBottom(proxy: ScrollViewProxy) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            withAnimation(.easeOut(duration: 0.3)) {
+                if chatManager.isLoading {
+                    proxy.scrollTo("typing", anchor: .bottom)
+                } else if let lastMessage = chatManager.messages.last {
+                    proxy.scrollTo(lastMessage.id, anchor: .bottom)
                 }
             }
         }
     }
     
-    private var welcomeView: some View {
-        VStack(spacing: 24) {
-            Spacer()
-            
-            Image(systemName: "message.badge.waveform")
-                .font(.system(size: 60))
-                .foregroundColor(Color(hex: "a78bfa"))
-            
-            Text(L10n.howCanIHelp)
-                .font(.system(size: 24, weight: .bold))
-                .foregroundColor(.white)
-            
-            // Quick suggestions in a horizontal scroll
-            Text("💡 דוגמאות:")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(Color(hex: "64748b"))
-                .padding(.top, 20)
-            
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    SuggestionButton(text: L10n.suggestionWhatToday) {
-                        sendMessage(L10n.suggestionWhatToday)
-                    }
-                    SuggestionButton(text: L10n.suggestionAddTask) {
-                        sendMessage(L10n.suggestionAddTaskFull)
-                    }
-                }
-                .padding(.horizontal, 20)
-            }
-            
-            Spacer()
-            
-            // Hint to type
-            HStack(spacing: 8) {
-                Image(systemName: "keyboard")
-                    .font(.system(size: 14))
-                Text(L10n.typeMessageHint)
-                    .font(.system(size: 14))
-            }
-            .foregroundColor(Color(hex: "64748b"))
-            .padding(.bottom, 20)
-        }
-    }
+    // MARK: - Input Area (ChatGPT-style)
     
-    // MARK: - Input (WhatsApp-style)
-    
-    private var inputView: some View {
+    private var inputArea: some View {
         VStack(spacing: 0) {
-            // Divider line
-            Rectangle()
-                .fill(Color.white.opacity(0.2))
-                .frame(height: 1)
-            
-            HStack(spacing: 12) {
-                // Text input box - WhatsApp style with visible text
+            HStack(alignment: .bottom, spacing: 12) {
+                // Text input with auto-grow
                 ZStack(alignment: .leading) {
                     // Background
                     RoundedRectangle(cornerRadius: 24)
-                        .fill(Color(hex: "2d2d44"))
+                        .fill(Color(hex: "1a1a1a"))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 24)
+                                .stroke(Color(hex: "2f2f2f"), lineWidth: 1)
+                        )
                     
-                    // Border
-                    RoundedRectangle(cornerRadius: 24)
-                        .stroke(isInputFocused ? Color(hex: "a78bfa") : Color(hex: "4a4a6a"), lineWidth: 2)
-                    
-                    // Placeholder (only when empty)
+                    // Placeholder
                     if messageText.isEmpty {
                         Text(L10n.shared.typeMessagePlaceholder)
                             .font(.system(size: 16))
-                            .foregroundColor(Color(hex: "64748b"))
-                            .padding(.horizontal, 16)
+                            .foregroundColor(Color(hex: "8e8ea0"))
+                            .padding(.horizontal, 20)
                     }
                     
-                    // TextField with visible white text
-                    TextField("", text: $messageText)
+                    // TextField
+                    TextField("", text: $messageText, axis: .vertical)
                         .textFieldStyle(.plain)
                         .font(.system(size: 16))
                         .foregroundStyle(Color.white)
-                        .tint(.white)
+                        .tint(Color(hex: "10a37f"))
+                        .lineLimit(1...5)
                         .focused($isInputFocused)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
                         .submitLabel(.send)
                         .onSubmit {
                             sendCurrentMessage()
                         }
                 }
-                .frame(height: 48)
+                .frame(minHeight: 48)
                 
                 // Send button
                 Button(action: sendCurrentMessage) {
                     ZStack {
                         Circle()
-                            .fill(messageText.isEmpty ? Color(hex: "3d3d5c") : Color(hex: "a78bfa"))
-                            .frame(width: 48, height: 48)
+                            .fill(messageText.isEmpty || chatManager.isLoading
+                                  ? Color(hex: "2f2f2f")
+                                  : Color(hex: "10a37f"))
+                            .frame(width: 40, height: 40)
                         
                         Image(systemName: "arrow.up")
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.white)
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(messageText.isEmpty || chatManager.isLoading
+                                             ? Color(hex: "8e8ea0")
+                                             : .white)
                     }
                 }
                 .disabled(messageText.isEmpty || chatManager.isLoading)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .padding(.bottom, 8) // Extra padding for tab bar
         }
-        .background(Color(hex: "1a1a2e"))
+        .background(Color(hex: "0f0f0f"))
     }
     
     // MARK: - Actions
     
-    private func checkAPIKey() {
-        if Config.openAIAPIKey.isEmpty {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                showingAPIKeyAlert = true
-            }
-        }
-    }
-    
     private func sendCurrentMessage() {
-        guard !messageText.isEmpty else { return }
-        sendMessage(messageText)
+        guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        let text = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
         messageText = ""
+        sendMessage(text)
     }
     
     private func sendMessage(_ text: String) {
-        let tasks = taskManager.tasks
-        chatManager.sendMessage(text, tasks: tasks)
+        chatManager.sendMessage(text, tasks: taskManager.tasks)
     }
 }
 
-// MARK: - Chat Manager
+// MARK: - ChatGPT Message Row
+
+struct ChatGPTMessageRow: View {
+    let message: ChatMessage
+    
+    private var isRTL: Bool {
+        guard let firstChar = message.content.first else { return false }
+        return firstChar.isHebrewOrArabic
+    }
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            if message.role == .assistant {
+                // AI Avatar
+                ZStack {
+                    Circle()
+                        .fill(Color(hex: "10a37f"))
+                        .frame(width: 32, height: 32)
+                    
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.white)
+                }
+            }
+            
+            VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 4) {
+                // Role label
+                Text(message.role == .user
+                     ? (L10n.shared.currentLanguage == .hebrew ? "אתה" : "You")
+                     : "ChatGPT")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.white)
+                
+                // Message content
+                Text(message.content)
+                    .font(.system(size: 15))
+                    .foregroundColor(Color(hex: "d1d5db"))
+                    .multilineTextAlignment(isRTL ? .trailing : .leading)
+                    .environment(\.layoutDirection, isRTL ? .rightToLeft : .leftToRight)
+                    .textSelection(.enabled)
+            }
+            .frame(maxWidth: .infinity, alignment: message.role == .user ? .trailing : .leading)
+            
+            if message.role == .user {
+                // User Avatar
+                ZStack {
+                    Circle()
+                        .fill(Color(hex: "5436da"))
+                        .frame(width: 32, height: 32)
+                    
+                    Image(systemName: "person.fill")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.white)
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 16)
+        .background(message.role == .assistant ? Color(hex: "1a1a1a") : Color.clear)
+    }
+}
+
+// MARK: - Typing Indicator (ChatGPT-style)
+
+struct ChatGPTTypingRow: View {
+    @State private var dotScale: [CGFloat] = [0.5, 0.5, 0.5]
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            // AI Avatar
+            ZStack {
+                Circle()
+                    .fill(Color(hex: "10a37f"))
+                    .frame(width: 32, height: 32)
+                
+                Image(systemName: "sparkles")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.white)
+            }
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text("ChatGPT")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.white)
+                
+                // Animated dots
+                HStack(spacing: 4) {
+                    ForEach(0..<3, id: \.self) { index in
+                        Circle()
+                            .fill(Color(hex: "8e8ea0"))
+                            .frame(width: 8, height: 8)
+                            .scaleEffect(dotScale[index])
+                    }
+                }
+                .onAppear {
+                    animateDots()
+                }
+            }
+            
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 16)
+        .background(Color(hex: "1a1a1a"))
+    }
+    
+    private func animateDots() {
+        for i in 0..<3 {
+            withAnimation(
+                .easeInOut(duration: 0.5)
+                .repeatForever(autoreverses: true)
+                .delay(Double(i) * 0.15)
+            ) {
+                dotScale[i] = 1.0
+            }
+        }
+    }
+}
+
+// MARK: - Chat Manager (unchanged functionality)
 
 @MainActor
 class ChatManager: ObservableObject {
     @Published var messages: [ChatMessage] = []
     @Published var isLoading = false
     
-    // Conversation history for API
     private var conversationHistory: [[String: Any]] = []
     
     func sendMessage(_ text: String, tasks: [TaskItem]) {
-        // Add user message
         let userMessage = ChatMessage(role: .user, content: text)
         messages.append(userMessage)
         
-        // Check API key
         guard !Config.openAIAPIKey.isEmpty else {
             let errorMessage = ChatMessage(role: .assistant, content: L10n.shared.currentLanguage == .hebrew 
                 ? "אנא הגדר את מפתח ה-API של OpenAI בהגדרות" 
@@ -405,7 +559,6 @@ class ChatManager: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(Config.openAIAPIKey)", forHTTPHeaderField: "Authorization")
         
-        // Build task context
         let taskContext = buildTaskContext(tasks: tasks)
         let isHebrew = L10n.shared.currentLanguage == .hebrew
         
@@ -443,10 +596,8 @@ class ChatManager: ObservableObject {
         \(taskContext)
         """
         
-        // Add user message to history
         conversationHistory.append(["role": "user", "content": message])
         
-        // Build messages array
         var messagesArray: [[String: Any]] = [["role": "system", "content": systemPrompt]]
         messagesArray.append(contentsOf: conversationHistory)
         
@@ -462,7 +613,6 @@ class ChatManager: ObservableObject {
         
         let (data, _) = try await URLSession.shared.data(for: request)
         
-        // Parse response
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               let choices = json["choices"] as? [[String: Any]],
               let firstChoice = choices.first,
@@ -470,9 +620,7 @@ class ChatManager: ObservableObject {
             throw NSError(domain: "ChatManager", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])
         }
         
-        // Check for tool calls
         if let toolCalls = messageData["tool_calls"] as? [[String: Any]] {
-            // Execute tool calls
             var toolResults: [[String: Any]] = []
             
             for toolCall in toolCalls {
@@ -493,19 +641,15 @@ class ChatManager: ObservableObject {
                 ])
             }
             
-            // Add assistant message with tool calls to history
             conversationHistory.append(messageData)
             
-            // Add tool results to history
             for result in toolResults {
                 conversationHistory.append(result)
             }
             
-            // Make another API call to get final response
             return try await getFinalResponse(systemPrompt: systemPrompt)
         }
         
-        // No tool calls - return content directly
         if let content = messageData["content"] as? String {
             conversationHistory.append(["role": "assistant", "content": content])
             return content
@@ -554,16 +698,12 @@ class ChatManager: ObservableObject {
         switch name {
         case "get_tasks":
             return await executeGetTasks(args: args)
-            
         case "create_task":
             return await executeCreateTask(args: args)
-            
         case "get_contacts":
             return await executeGetContacts(args: args)
-            
         case "create_contact":
             return await executeCreateContact(args: args)
-            
         default:
             return isHebrew ? "פונקציה לא מוכרת" : "Unknown function"
         }
@@ -603,16 +743,12 @@ class ChatManager: ObservableObject {
             return isHebrew ? "חסרים פרטי משימה" : "Missing task details"
         }
         
-        // Get user ID from AuthManager
         guard let userId = AuthManager.shared.currentUser?.id else {
             return isHebrew ? "❌ לא מחובר - אנא התחבר מחדש" : "❌ Not authenticated - please log in again"
         }
         
-        var input = CreateTaskInput(
-            title: title,
-            date: date
-        )
-        input.userId = userId  // Set the user_id for Supabase RLS
+        var input = CreateTaskInput(title: title, date: date)
+        input.userId = userId
         input.startTime = args["start_time"] as? String
         input.endTime = args["end_time"] as? String
         if let notes = args["notes"] as? String {
@@ -621,7 +757,6 @@ class ChatManager: ObservableObject {
         
         do {
             let task = try await taskManager.createTask(input)
-            // Refresh tasks to show the new task in the list
             await taskManager.fetchTasks()
             return isHebrew 
                 ? "✅ המשימה '\(task.title)' נוצרה בהצלחה לתאריך \(task.date)"
@@ -715,7 +850,6 @@ class ChatManager: ObservableObject {
             context += "• \(task.title) (\(task.date))\n"
         }
         
-        // Add contacts count
         let contactsCount = PeopleManager.shared.people.count
         context += isHebrew ? "\nאנשי קשר: \(contactsCount)" : "\nContacts: \(contactsCount)"
         
@@ -736,94 +870,12 @@ struct ChatMessage: Identifiable {
     }
 }
 
-// MARK: - Message Bubble
-
-struct MessageBubble: View {
-    let message: ChatMessage
-    
-    // Detect if message content is RTL (Hebrew/Arabic)
-    private var isRTL: Bool {
-        guard let firstChar = message.content.first else { return false }
-        let language = CFStringTokenizerCopyBestStringLanguage(message.content as CFString, CFRange(location: 0, length: message.content.count))
-        return language as String? == "he" || language as String? == "ar" || firstChar.isHebrewOrArabic
-    }
-    
-    var body: some View {
-        HStack {
-            if message.role == .user { Spacer() }
-            
-            Text(message.content)
-                .font(.system(size: 15))
-                .foregroundColor(message.role == .user ? .white : Color(hex: "e2e8f0"))
-                .multilineTextAlignment(isRTL ? .trailing : .leading)
-                .environment(\.layoutDirection, isRTL ? .rightToLeft : .leftToRight)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(message.role == .user ? Color(hex: "7c3aed") : Color.white.opacity(0.1))
-                )
-            
-            if message.role == .assistant { Spacer() }
-        }
-    }
-}
-
-// MARK: - Suggestion Button
-
-struct SuggestionButton: View {
-    let text: String
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            Text(text)
-                .font(.system(size: 14))
-                .foregroundColor(Color(hex: "a78bfa"))
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(Color(hex: "a78bfa").opacity(0.1))
-                .cornerRadius(20)
-        }
-    }
-}
-
-// MARK: - Typing Indicator
-
-struct TypingIndicator: View {
-    @State private var animating = false
-    
-    var body: some View {
-        HStack(spacing: 4) {
-            ForEach(0..<3) { index in
-                Circle()
-                    .fill(Color(hex: "94a3b8"))
-                    .frame(width: 8, height: 8)
-                    .scaleEffect(animating ? 1 : 0.5)
-                    .animation(
-                        .easeInOut(duration: 0.6)
-                        .repeatForever()
-                        .delay(Double(index) * 0.2),
-                        value: animating
-                    )
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.white.opacity(0.1))
-        .cornerRadius(16)
-        .onAppear { animating = true }
-    }
-}
-
-
-// MARK: - Character Extension for RTL Detection
+// MARK: - Character Extension
 
 extension Character {
     var isHebrewOrArabic: Bool {
         guard let scalar = unicodeScalars.first else { return false }
         let value = scalar.value
-        // Hebrew: 0x0590–0x05FF, Arabic: 0x0600–0x06FF
         return (value >= 0x0590 && value <= 0x05FF) || (value >= 0x0600 && value <= 0x06FF)
     }
 }
@@ -832,4 +884,3 @@ extension Character {
     ChatView()
         .environmentObject(TaskManager.shared)
 }
-
