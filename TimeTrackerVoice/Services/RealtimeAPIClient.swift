@@ -314,6 +314,22 @@ class RealtimeAPIClient: NSObject, ObservableObject {
                     ],
                     "required": ["first_name", "relationship_type"]
                 ]
+            ],
+            // Events tools
+            [
+                "type": "function",
+                "name": "get_events",
+                "description": "Get recurring events like anniversaries, birthdays, and custom events. Use this when user asks about anniversaries, wedding anniversary, or special dates.",
+                "parameters": [
+                    "type": "object",
+                    "properties": [
+                        "event_type": [
+                            "type": "string",
+                            "enum": ["birthday", "anniversary", "custom", "all"],
+                            "description": "Filter by event type. Use 'anniversary' for wedding anniversaries."
+                        ]
+                    ]
+                ]
             ]
         ]
     }
@@ -708,6 +724,47 @@ class RealtimeAPIClient: NSObject, ObservableObject {
             } catch {
                 return "Failed to create contact: \(error.localizedDescription)"
             }
+            
+        // MARK: - Event Tools
+            
+        case "get_events":
+            let eventManager = EventManager.shared
+            
+            // Ensure events are loaded
+            await eventManager.fetchEvents()
+            
+            let filterTypeStr = args["event_type"] as? String ?? "all"
+            
+            var events = eventManager.events
+            if filterTypeStr != "all", let filterType = EventType(rawValue: filterTypeStr) {
+                events = events.filter { $0.eventType == filterType }
+            }
+            
+            if events.isEmpty {
+                return filterTypeStr != "all"
+                    ? "No events found of type \(filterTypeStr)"
+                    : "No events found"
+            }
+            
+            var result = "Events (\(events.count)):\n"
+            for event in events {
+                let icon = event.icon ?? "📅"
+                let typeLabel = event.eventType.rawValue
+                result += "\(icon) \(event.name) - \(typeLabel)\n"
+                result += "   Date: \(event.date)"
+                if let year = event.year {
+                    let calendar = Calendar.current
+                    let currentYear = calendar.component(.year, from: Date())
+                    let yearsSince = currentYear - year
+                    result += " (Year: \(year), \(yearsSince) years ago)"
+                }
+                result += "\n"
+                if let notes = event.notes, !notes.isEmpty {
+                    result += "   Notes: \(notes)\n"
+                }
+            }
+            
+            return result
             
         default:
             return "Unknown function: \(name)"

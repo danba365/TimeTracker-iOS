@@ -519,6 +519,24 @@ class ChatManager: ObservableObject {
                         "required": ["first_name", "relationship_type"]
                     ]
                 ]
+            ],
+            [
+                "type": "function",
+                "function": [
+                    "name": "get_events",
+                    "description": "Get recurring events like anniversaries, birthdays, and custom events. Use this when user asks about anniversaries or special dates.",
+                    "parameters": [
+                        "type": "object",
+                        "properties": [
+                            "event_type": [
+                                "type": "string",
+                                "enum": ["birthday", "anniversary", "custom", "all"],
+                                "description": "Filter by event type. Use 'anniversary' for wedding anniversaries."
+                            ]
+                        ],
+                        "required": []
+                    ]
+                ]
             ]
         ]
     }
@@ -536,7 +554,7 @@ class ChatManager: ObservableObject {
         let isHebrew = L10n.shared.currentLanguage == .hebrew
         
         let systemPrompt = isHebrew ? """
-        אתה עוזר AI ידידותי לאפליקציית TimeTracker. עזור למשתמשים לנהל משימות ואנשי קשר.
+        אתה עוזר AI ידידותי לאפליקציית TimeTracker. עזור למשתמשים לנהל משימות, אנשי קשר ואירועים.
         היה תמציתי וידידותי. דבר בעברית.
         
         תאריך נוכחי: \(Date().formatted(date: .complete, time: .omitted))
@@ -546,13 +564,14 @@ class ChatManager: ObservableObject {
         - create_task: צור משימה חדשה
         - get_contacts: קבל רשימת אנשי קשר
         - create_contact: צור איש קשר חדש
+        - get_events: קבל אירועים שנתיים כמו ימי נישואין, ימי הולדת ואירועים מותאמים
         
-        השתמש בכלים אלה כאשר המשתמש מבקש לבצע פעולות!
+        השתמש ב-get_events כאשר המשתמש שואל על ימי נישואין או תאריכים מיוחדים!
         
         הקשר המשימות הנוכחי:
         \(taskContext)
         """ : """
-        You are a helpful AI assistant for TimeTracker. Help users manage tasks and contacts.
+        You are a helpful AI assistant for TimeTracker. Help users manage tasks, contacts, and events.
         Be concise and friendly.
         
         Current date: \(Date().formatted(date: .complete, time: .omitted))
@@ -562,8 +581,9 @@ class ChatManager: ObservableObject {
         - create_task: Create a new task
         - get_contacts: Get list of contacts
         - create_contact: Create a new contact
+        - get_events: Get recurring events like anniversaries, birthdays, and custom events
         
-        Use these tools when the user asks to perform actions!
+        Use get_events when user asks about anniversaries or special dates!
         
         Current task context:
         \(taskContext)
@@ -677,6 +697,8 @@ class ChatManager: ObservableObject {
             return await executeGetContacts(args: args)
         case "create_contact":
             return await executeCreateContact(args: args)
+        case "get_events":
+            return await executeGetEvents(args: args)
         default:
             return isHebrew ? "פונקציה לא מוכרת" : "Unknown function"
         }
@@ -802,6 +824,39 @@ class ChatManager: ObservableObject {
         } catch {
             return isHebrew ? "❌ שגיאה: \(error.localizedDescription)" : "❌ Error: \(error.localizedDescription)"
         }
+    }
+    
+    private func executeGetEvents(args: [String: Any]) async -> String {
+        let isHebrew = L10n.shared.currentLanguage == .hebrew
+        let eventManager = EventManager.shared
+        
+        // Ensure events are loaded
+        await eventManager.fetchEvents()
+        
+        let filterTypeStr = args["event_type"] as? String ?? "all"
+        
+        var events = eventManager.events
+        if filterTypeStr != "all", let filterType = EventType(rawValue: filterTypeStr) {
+            events = events.filter { $0.eventType == filterType }
+        }
+        
+        if events.isEmpty {
+            return isHebrew ? "לא נמצאו אירועים" : "No events found"
+        }
+        
+        var result = isHebrew ? "אירועים (\(events.count)):\n" : "Events (\(events.count)):\n"
+        for event in events {
+            let icon = event.icon ?? "📅"
+            let typeLabel = event.eventType.localizedString(isHebrew: isHebrew)
+            let yearInfo = event.year != nil ? " (שנת \(event.year!))" : ""
+            result += "\(icon) \(event.name) - \(typeLabel)\n"
+            result += "   תאריך: \(event.date)\(yearInfo)\n"
+            if let notes = event.notes, !notes.isEmpty {
+                result += "   הערות: \(notes)\n"
+            }
+        }
+        
+        return result
     }
     
     private func buildTaskContext(tasks: [TaskItem]) -> String {
