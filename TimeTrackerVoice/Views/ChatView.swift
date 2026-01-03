@@ -12,7 +12,7 @@ struct ChatView: View {
     
     var body: some View {
         ZStack {
-            // Background
+            // Background (ignore safe areas)
             Color(hex: "0f0f0f")
                 .ignoresSafeArea()
                 .onTapGesture {
@@ -30,17 +30,16 @@ struct ChatView: View {
                     messagesView
                 }
                 
-                // Suggestion cards (always visible at bottom)
-                if chatManager.messages.isEmpty || !isInputFocused {
+                // Suggestion cards (hide when keyboard is shown)
+                if !isInputFocused {
                     suggestionCardsView
                 }
                 
-                // Input bar
+                // Input bar - always visible above keyboard
                 inputBarView
-                
-                // Tab bar spacer
-                Color.clear.frame(height: 80)
+                    .padding(.bottom, isInputFocused ? 0 : 80) // Tab bar space only when keyboard hidden
             }
+            .animation(.easeInOut(duration: 0.25), value: isInputFocused)
         }
         .onAppear {
             if Config.openAIAPIKey.isEmpty {
