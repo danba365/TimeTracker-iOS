@@ -6,6 +6,7 @@ struct ContactsView: View {
     @State private var searchText = ""
     @State private var selectedFilter: RelationshipType? = nil
     @State private var showingAddContact = false
+    @FocusState private var isSearchFocused: Bool
     
     private var filteredPeople: [Person] {
         var people = peopleManager.people
@@ -47,6 +48,9 @@ struct ContactsView: View {
                 endPoint: .bottom
             )
             .ignoresSafeArea()
+            .onTapGesture {
+                isSearchFocused = false
+            }
             
             VStack(spacing: 0) {
                 // Header
@@ -68,6 +72,9 @@ struct ContactsView: View {
                     contactsListView
                 }
             }
+        }
+        .onTapGesture {
+            isSearchFocused = false
         }
         .onAppear {
             Task {
@@ -119,6 +126,7 @@ struct ContactsView: View {
                     title: L10n.shared.currentLanguage == .hebrew ? "הכל" : "All",
                     isSelected: selectedFilter == nil
                 ) {
+                    isSearchFocused = false
                     selectedFilter = nil
                 }
                 
@@ -127,6 +135,7 @@ struct ContactsView: View {
                     icon: "house.fill",
                     isSelected: selectedFilter == .family
                 ) {
+                    isSearchFocused = false
                     selectedFilter = selectedFilter == .family ? nil : .family
                 }
                 
@@ -135,6 +144,7 @@ struct ContactsView: View {
                     icon: "person.2.fill",
                     isSelected: selectedFilter == .friend
                 ) {
+                    isSearchFocused = false
                     selectedFilter = selectedFilter == .friend ? nil : .friend
                 }
                 
@@ -143,6 +153,7 @@ struct ContactsView: View {
                     icon: "briefcase.fill",
                     isSelected: selectedFilter == .colleague
                 ) {
+                    isSearchFocused = false
                     selectedFilter = selectedFilter == .colleague ? nil : .colleague
                 }
                 
@@ -151,6 +162,7 @@ struct ContactsView: View {
                     icon: "person.fill",
                     isSelected: selectedFilter == .other
                 ) {
+                    isSearchFocused = false
                     selectedFilter = selectedFilter == .other ? nil : .other
                 }
             }
@@ -172,9 +184,17 @@ struct ContactsView: View {
             )
             .textFieldStyle(.plain)
             .foregroundColor(.white)
+            .focused($isSearchFocused)
+            .submitLabel(.search)
+            .onSubmit {
+                isSearchFocused = false
+            }
             
             if !searchText.isEmpty {
-                Button(action: { searchText = "" }) {
+                Button(action: { 
+                    searchText = ""
+                    isSearchFocused = false
+                }) {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(Color(hex: "64748b"))
                 }
@@ -208,6 +228,10 @@ struct ContactsView: View {
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 100)
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .onTapGesture {
+            isSearchFocused = false
         }
         .refreshable {
             await peopleManager.fetchPeople()
