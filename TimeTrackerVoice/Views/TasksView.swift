@@ -9,10 +9,6 @@ struct TasksView: View {
     @State private var showingAddTask = false
     @GestureState private var dragOffset: CGFloat = 0
     
-    // Delete confirmation state
-    @State private var showingDeleteAlert = false
-    @State private var taskToDelete: TaskItem?
-    
     private let calendar = Calendar.current
     
     /// Get people with birthdays on the selected date
@@ -118,18 +114,6 @@ struct TasksView: View {
                 await taskManager.fetchTasks()
             }
         }
-        .alert(L10n.deleteConfirmTitle, isPresented: $showingDeleteAlert) {
-            Button(L10n.cancel, role: .cancel) {
-                taskToDelete = nil
-            }
-            Button(L10n.delete, role: .destructive) {
-                if let task = taskToDelete {
-                    deleteTask(task)
-                }
-            }
-        } message: {
-            Text(L10n.deleteConfirmMessage)
-        }
     }
     
     // MARK: - Delete Task
@@ -138,7 +122,6 @@ struct TasksView: View {
         Task {
             do {
                 try await taskManager.deleteTask(id: task.id)
-                taskToDelete = nil
             } catch {
                 print("❌ Failed to delete task: \(error)")
             }
@@ -337,10 +320,9 @@ struct TasksView: View {
                 if !reminders.isEmpty {
                     ForEach(reminders, id: \.id) { reminder in
                         ReminderRowView(reminder: reminder)
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 Button(role: .destructive) {
-                                    taskToDelete = reminder
-                                    showingDeleteAlert = true
+                                    deleteTask(reminder)
                                 } label: {
                                     Label(L10n.delete, systemImage: "trash")
                                 }
@@ -370,10 +352,9 @@ struct TasksView: View {
                         TaskRowView(task: task) {
                             toggleTaskStatus(task)
                         }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                             Button(role: .destructive) {
-                                taskToDelete = task
-                                showingDeleteAlert = true
+                                deleteTask(task)
                             } label: {
                                 Label(L10n.delete, systemImage: "trash")
                             }
