@@ -639,17 +639,6 @@ struct ReminderRowView: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            // Bell icon (no toggle)
-            ZStack {
-                Circle()
-                    .fill(Color(hex: "06b6d4").opacity(0.2))
-                    .frame(width: 44, height: 44)
-                
-                Image(systemName: "bell.fill")
-                    .font(.system(size: 20))
-                    .foregroundColor(Color(hex: "06b6d4"))
-            }
-            
             // Reminder info
             VStack(alignment: .leading, spacing: 4) {
                 Text(reminder.title)
