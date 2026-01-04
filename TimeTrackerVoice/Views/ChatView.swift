@@ -265,9 +265,8 @@ struct MessageRow: View {
     let message: ChatMessage
     let isStreaming: Bool
     
-    private var isRTL: Bool {
-        guard let firstChar = message.content.first else { return false }
-        return firstChar.isHebrewOrArabic
+    private var isHebrew: Bool {
+        L10n.shared.currentLanguage == .hebrew
     }
     
     private var isUser: Bool {
@@ -293,34 +292,35 @@ struct MessageRow: View {
                 }
             }
             
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: isHebrew ? .trailing : .leading, spacing: 4) {
                 // Label
                 Text(isUser
-                     ? (L10n.shared.currentLanguage == .hebrew ? "אתה" : "You")
-                     : "ChatGPT")
+                     ? (isHebrew ? "אתה" : "You")
+                     : (isHebrew ? "צ'אט אישי" : "ChatGPT"))
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.white)
+                    .frame(maxWidth: .infinity, alignment: isHebrew ? .trailing : .leading)
                 
                 // Content
-                HStack(spacing: 0) {
-                    Text(message.content)
-                        .font(.system(size: 15))
-                        .foregroundColor(Color(hex: "d1d5db"))
-                        .multilineTextAlignment(isRTL ? .trailing : .leading)
-                        .environment(\.layoutDirection, isRTL ? .rightToLeft : .leftToRight)
-                        .textSelection(.enabled)
-                    
-                    if isStreaming {
-                        Text("●")
-                            .font(.system(size: 12))
-                            .foregroundColor(.white)
-                            .opacity(0.8)
-                    }
+                Text(message.content)
+                    .font(.system(size: 15))
+                    .foregroundColor(Color(hex: "d1d5db"))
+                    .multilineTextAlignment(isHebrew ? .trailing : .leading)
+                    .frame(maxWidth: .infinity, alignment: isHebrew ? .trailing : .leading)
+                    .textSelection(.enabled)
+                
+                if isStreaming {
+                    Text("●")
+                        .font(.system(size: 12))
+                        .foregroundColor(.white)
+                        .opacity(0.8)
+                        .frame(maxWidth: .infinity, alignment: isHebrew ? .trailing : .leading)
                 }
             }
             
-            Spacer()
+            Spacer(minLength: 0)
         }
+        .environment(\.layoutDirection, isHebrew ? .rightToLeft : .leftToRight)
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
     }
@@ -330,6 +330,10 @@ struct MessageRow: View {
 
 struct StreamingMessageRow: View {
     @State private var cursorVisible = true
+    
+    private var isHebrew: Bool {
+        L10n.shared.currentLanguage == .hebrew
+    }
     
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -344,10 +348,11 @@ struct StreamingMessageRow: View {
                     .foregroundColor(.black)
             }
             
-            VStack(alignment: .leading, spacing: 4) {
-                Text("ChatGPT")
+            VStack(alignment: isHebrew ? .trailing : .leading, spacing: 4) {
+                Text(isHebrew ? "צ'אט אישי" : "ChatGPT")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.white)
+                    .frame(maxWidth: .infinity, alignment: isHebrew ? .trailing : .leading)
                 
                 // Blinking cursor
                 Text("●")
@@ -356,10 +361,12 @@ struct StreamingMessageRow: View {
                     .opacity(cursorVisible ? 0.8 : 0.2)
                     .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: cursorVisible)
                     .onAppear { cursorVisible = true }
+                    .frame(maxWidth: .infinity, alignment: isHebrew ? .trailing : .leading)
             }
             
-            Spacer()
+            Spacer(minLength: 0)
         }
+        .environment(\.layoutDirection, isHebrew ? .rightToLeft : .leftToRight)
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
     }
