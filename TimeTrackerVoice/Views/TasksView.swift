@@ -642,56 +642,48 @@ struct ReminderRowView: View {
             // Teal bell icon - at start so it appears on RIGHT in RTL (Hebrew)
             ZStack {
                 Circle()
-                    .fill(Color(hex: "06b6d4").opacity(0.3))
+                    .fill(Color(hex: "1a3a4a"))
                     .frame(width: 44, height: 44)
                 
                 Image(systemName: "bell.fill")
-                    .font(.system(size: 18))
+                    .font(.system(size: 20))
                     .foregroundColor(Color(hex: "06b6d4"))
             }
             
             Spacer()
             
             // Reminder info
-            VStack(alignment: .trailing, spacing: 4) {
+            VStack(alignment: .trailing, spacing: 6) {
                 Text(reminder.title)
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.white)
                 
                 HStack(spacing: 8) {
+                    // Time with clock icon
                     if let startTime = reminder.startTime {
                         HStack(spacing: 4) {
-                            Image(systemName: "clock")
-                                .font(.system(size: 12))
                             Text(formatTimeWithoutSeconds(startTime))
-                                .font(.system(size: 12))
+                                .font(.system(size: 13, weight: .medium))
+                            Image(systemName: "clock.fill")
+                                .font(.system(size: 11))
                         }
                         .foregroundColor(Color(hex: "06b6d4"))
                     }
                     
-                    // Show "Reminder" label instead of priority
+                    // "תזכורת" badge
                     Text(L10n.reminder)
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(Color(hex: "06b6d4"))
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color(hex: "06b6d4").opacity(0.2))
-                        .cornerRadius(4)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color(hex: "06b6d4").opacity(0.15))
+                        .cornerRadius(6)
                 }
             }
         }
-        .padding(16)
-        .background(
-            LinearGradient(
-                colors: [Color(hex: "06b6d4").opacity(0.15), Color(hex: "0891b2").opacity(0.08)],
-                startPoint: .leading,
-                endPoint: .trailing
-            )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color(hex: "06b6d4").opacity(0.3), lineWidth: 1)
-        )
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(Color(hex: "1a2634"))
         .cornerRadius(12)
     }
     
