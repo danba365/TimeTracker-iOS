@@ -324,6 +324,34 @@ class RealtimeAPIClient: NSObject, ObservableObject {
                     "required": ["first_name", "relationship_type"]
                 ]
             ],
+            [
+                "type": "function",
+                "name": "update_contact",
+                "description": "Update an existing contact's information",
+                "parameters": [
+                    "type": "object",
+                    "properties": [
+                        "contact_name": ["type": "string", "description": "Name of the contact to update"],
+                        "new_phone": ["type": "string", "description": "New phone number (optional)"],
+                        "new_email": ["type": "string", "description": "New email address (optional)"],
+                        "new_birthday": ["type": "string", "description": "New birthday in YYYY-MM-DD format (optional)"],
+                        "new_notes": ["type": "string", "description": "New notes (optional)"]
+                    ],
+                    "required": ["contact_name"]
+                ]
+            ],
+            [
+                "type": "function",
+                "name": "delete_contact",
+                "description": "Delete a contact. Use when user wants to remove a contact.",
+                "parameters": [
+                    "type": "object",
+                    "properties": [
+                        "contact_name": ["type": "string", "description": "Name of the contact to delete"]
+                    ],
+                    "required": ["contact_name"]
+                ]
+            ],
             // Events tools
             [
                 "type": "function",
@@ -800,6 +828,71 @@ class RealtimeAPIClient: NSObject, ObservableObject {
                 return "✅ Created contact: \(person.fullName) - \(relationshipInfo)"
             } catch {
                 return "Failed to create contact: \(error.localizedDescription)"
+            }
+            
+        case "update_contact":
+            let peopleManager = PeopleManager.shared
+            
+            guard let contactName = args["contact_name"] as? String else {
+                return "Missing contact name to update"
+            }
+            
+            // Find the contact by name
+            let searchLower = contactName.lowercased()
+            guard let person = peopleManager.people.first(where: { 
+                $0.firstName.lowercased().contains(searchLower) ||
+                ($0.lastName?.lowercased().contains(searchLower) ?? false) ||
+                $0.fullName.lowercased().contains(searchLower)
+            }) else {
+                return "❌ Contact '\(contactName)' not found"
+            }
+            
+            var updateInput = UpdatePersonInput()
+            
+            if let newPhone = args["new_phone"] as? String {
+                updateInput.phone = newPhone
+            }
+            if let newEmail = args["new_email"] as? String {
+                updateInput.email = newEmail
+            }
+            if let newBirthday = args["new_birthday"] as? String {
+                updateInput.birthday = newBirthday
+            }
+            if let newNotes = args["new_notes"] as? String {
+                updateInput.notes = newNotes
+            }
+            
+            do {
+                _ = try await peopleManager.updatePerson(id: person.id, input: updateInput)
+                await peopleManager.fetchPeople()
+                return "✅ Contact '\(person.fullName)' updated successfully"
+            } catch {
+                return "❌ Error: \(error.localizedDescription)"
+            }
+            
+        case "delete_contact":
+            let peopleManager = PeopleManager.shared
+            
+            guard let contactName = args["contact_name"] as? String else {
+                return "Missing contact name to delete"
+            }
+            
+            // Find the contact by name
+            let searchLower = contactName.lowercased()
+            guard let person = peopleManager.people.first(where: { 
+                $0.firstName.lowercased().contains(searchLower) ||
+                ($0.lastName?.lowercased().contains(searchLower) ?? false) ||
+                $0.fullName.lowercased().contains(searchLower)
+            }) else {
+                return "❌ Contact '\(contactName)' not found"
+            }
+            
+            do {
+                try await peopleManager.deletePerson(id: person.id)
+                await peopleManager.fetchPeople()
+                return "🗑️ Contact '\(person.fullName)' deleted successfully"
+            } catch {
+                return "❌ Error: \(error.localizedDescription)"
             }
             
         // MARK: - Event Tools

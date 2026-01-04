@@ -488,6 +488,42 @@ class ChatManager: ObservableObject {
             [
                 "type": "function",
                 "function": [
+                    "name": "update_task",
+                    "description": "Update an existing task or reminder. Can change title, date, time, status, or priority.",
+                    "parameters": [
+                        "type": "object",
+                        "properties": [
+                            "task_title": ["type": "string", "description": "The current title of the task to update"],
+                            "new_title": ["type": "string", "description": "New title (optional)"],
+                            "new_date": ["type": "string", "description": "New date in YYYY-MM-DD format (optional)"],
+                            "new_start_time": ["type": "string", "description": "New start time in HH:MM format (optional)"],
+                            "new_status": [
+                                "type": "string",
+                                "enum": ["todo", "in_progress", "done", "missed"],
+                                "description": "New status (optional)"
+                            ]
+                        ],
+                        "required": ["task_title"]
+                    ]
+                ]
+            ],
+            [
+                "type": "function",
+                "function": [
+                    "name": "delete_task",
+                    "description": "Delete a task or reminder. Use when user wants to remove, delete, or cancel a task/reminder.",
+                    "parameters": [
+                        "type": "object",
+                        "properties": [
+                            "task_title": ["type": "string", "description": "The title of the task to delete"]
+                        ],
+                        "required": ["task_title"]
+                    ]
+                ]
+            ],
+            [
+                "type": "function",
+                "function": [
                     "name": "get_contacts",
                     "description": "Get contacts with full details including birthday, phone, email. Use this when user asks about a specific person or their details.",
                     "parameters": [
@@ -526,6 +562,38 @@ class ChatManager: ObservableObject {
                             "email": ["type": "string", "description": "Email address (optional)"]
                         ],
                         "required": ["first_name", "relationship_type"]
+                    ]
+                ]
+            ],
+            [
+                "type": "function",
+                "function": [
+                    "name": "update_contact",
+                    "description": "Update an existing contact's information",
+                    "parameters": [
+                        "type": "object",
+                        "properties": [
+                            "contact_name": ["type": "string", "description": "Name of the contact to update"],
+                            "new_phone": ["type": "string", "description": "New phone number (optional)"],
+                            "new_email": ["type": "string", "description": "New email address (optional)"],
+                            "new_birthday": ["type": "string", "description": "New birthday in YYYY-MM-DD format (optional)"],
+                            "new_notes": ["type": "string", "description": "New notes (optional)"]
+                        ],
+                        "required": ["contact_name"]
+                    ]
+                ]
+            ],
+            [
+                "type": "function",
+                "function": [
+                    "name": "delete_contact",
+                    "description": "Delete a contact. Use when user wants to remove a contact.",
+                    "parameters": [
+                        "type": "object",
+                        "properties": [
+                            "contact_name": ["type": "string", "description": "Name of the contact to delete"]
+                        ],
+                        "required": ["contact_name"]
                     ]
                 ]
             ],
@@ -571,13 +639,15 @@ class ChatManager: ObservableObject {
         יש לך גישה לכלים הבאים:
         - get_tasks: קבל משימות לתאריך או טווח תאריכים
         - create_task: צור משימה או תזכורת חדשה
-          * השתמש ב-task_type: "task" למשימות רגילות
-          * השתמש ב-task_type: "reminder" לתזכורות (כשהמשתמש אומר "תזכורת", "להזכיר", "תזכיר לי")
+        - update_task: עדכן משימה קיימת (שנה כותרת, תאריך, שעה, סטטוס)
+        - delete_task: מחק משימה או תזכורת
         - get_contacts: קבל רשימת אנשי קשר
         - create_contact: צור איש קשר חדש
+        - update_contact: עדכן פרטי איש קשר
+        - delete_contact: מחק איש קשר
         - get_events: קבל אירועים שנתיים כמו ימי נישואין, ימי הולדת ואירועים מותאמים
         
-        חשוב: כשהמשתמש מבקש תזכורת, השתמש ב-task_type: "reminder"!
+        חשוב: כשהמשתמש מבקש למחוק או לעדכן, השתמש בכלים המתאימים!
         
         הקשר המשימות הנוכחי:
         \(taskContext)
@@ -590,13 +660,15 @@ class ChatManager: ObservableObject {
         You have access to these tools:
         - get_tasks: Get tasks for a date or date range
         - create_task: Create a new task or reminder
-          * Use task_type: "task" for regular tasks
-          * Use task_type: "reminder" for reminders (when user says "remind me", "reminder", "תזכורת")
+        - update_task: Update an existing task (change title, date, time, status)
+        - delete_task: Delete a task or reminder
         - get_contacts: Get list of contacts
         - create_contact: Create a new contact
+        - update_contact: Update contact details
+        - delete_contact: Delete a contact
         - get_events: Get recurring events like anniversaries, birthdays, and custom events
         
-        Important: When user asks for a reminder, use task_type: "reminder"!
+        Important: When user asks to delete or update, use the appropriate tools!
         
         Current task context:
         \(taskContext)
@@ -706,10 +778,18 @@ class ChatManager: ObservableObject {
             return await executeGetTasks(args: args)
         case "create_task":
             return await executeCreateTask(args: args)
+        case "update_task":
+            return await executeUpdateTask(args: args)
+        case "delete_task":
+            return await executeDeleteTask(args: args)
         case "get_contacts":
             return await executeGetContacts(args: args)
         case "create_contact":
             return await executeCreateContact(args: args)
+        case "update_contact":
+            return await executeUpdateContact(args: args)
+        case "delete_contact":
+            return await executeDeleteContact(args: args)
         case "get_events":
             return await executeGetEvents(args: args)
         default:
@@ -782,6 +862,70 @@ class ChatManager: ObservableObject {
                     ? "✅ המשימה '\(task.title)' נוצרה בהצלחה לתאריך \(task.date)"
                     : "✅ Task '\(task.title)' created for \(task.date)"
             }
+        } catch {
+            return isHebrew ? "❌ שגיאה: \(error.localizedDescription)" : "❌ Error: \(error.localizedDescription)"
+        }
+    }
+    
+    private func executeUpdateTask(args: [String: Any]) async -> String {
+        let isHebrew = L10n.shared.currentLanguage == .hebrew
+        let taskManager = TaskManager.shared
+        
+        guard let taskTitle = args["task_title"] as? String else {
+            return isHebrew ? "חסר שם המשימה לעדכון" : "Missing task title to update"
+        }
+        
+        // Find the task by title
+        guard let task = taskManager.findTask(byTitle: taskTitle) else {
+            return isHebrew ? "❌ לא נמצאה משימה בשם '\(taskTitle)'" : "❌ Task '\(taskTitle)' not found"
+        }
+        
+        var updateInput = UpdateTaskInput()
+        
+        if let newTitle = args["new_title"] as? String {
+            updateInput.title = newTitle
+        }
+        if let newDate = args["new_date"] as? String {
+            updateInput.date = newDate
+        }
+        if let newStartTime = args["new_start_time"] as? String {
+            updateInput.startTime = newStartTime
+        }
+        if let newStatusStr = args["new_status"] as? String,
+           let newStatus = TaskStatus(rawValue: newStatusStr) {
+            updateInput.status = newStatus
+        }
+        
+        do {
+            _ = try await taskManager.updateTask(id: task.id, input: updateInput)
+            await taskManager.fetchTasks()
+            return isHebrew
+                ? "✅ המשימה '\(taskTitle)' עודכנה בהצלחה"
+                : "✅ Task '\(taskTitle)' updated successfully"
+        } catch {
+            return isHebrew ? "❌ שגיאה: \(error.localizedDescription)" : "❌ Error: \(error.localizedDescription)"
+        }
+    }
+    
+    private func executeDeleteTask(args: [String: Any]) async -> String {
+        let isHebrew = L10n.shared.currentLanguage == .hebrew
+        let taskManager = TaskManager.shared
+        
+        guard let taskTitle = args["task_title"] as? String else {
+            return isHebrew ? "חסר שם המשימה למחיקה" : "Missing task title to delete"
+        }
+        
+        // Find the task by title
+        guard let task = taskManager.findTask(byTitle: taskTitle) else {
+            return isHebrew ? "❌ לא נמצאה משימה בשם '\(taskTitle)'" : "❌ Task '\(taskTitle)' not found"
+        }
+        
+        do {
+            try await taskManager.deleteTask(id: task.id)
+            await taskManager.fetchTasks()
+            return isHebrew
+                ? "🗑️ המשימה '\(taskTitle)' נמחקה בהצלחה"
+                : "🗑️ Task '\(taskTitle)' deleted successfully"
         } catch {
             return isHebrew ? "❌ שגיאה: \(error.localizedDescription)" : "❌ Error: \(error.localizedDescription)"
         }
@@ -930,6 +1074,79 @@ class ChatManager: ObservableObject {
             return isHebrew
                 ? "✅ איש הקשר '\(name)' נוצר בהצלחה"
                 : "✅ Contact '\(name)' created"
+        } catch {
+            return isHebrew ? "❌ שגיאה: \(error.localizedDescription)" : "❌ Error: \(error.localizedDescription)"
+        }
+    }
+    
+    private func executeUpdateContact(args: [String: Any]) async -> String {
+        let isHebrew = L10n.shared.currentLanguage == .hebrew
+        let peopleManager = PeopleManager.shared
+        
+        guard let contactName = args["contact_name"] as? String else {
+            return isHebrew ? "חסר שם איש הקשר לעדכון" : "Missing contact name to update"
+        }
+        
+        // Find the contact by name
+        let searchLower = contactName.lowercased()
+        guard let person = peopleManager.people.first(where: { 
+            $0.firstName.lowercased().contains(searchLower) ||
+            ($0.lastName?.lowercased().contains(searchLower) ?? false) ||
+            $0.fullName.lowercased().contains(searchLower)
+        }) else {
+            return isHebrew ? "❌ לא נמצא איש קשר בשם '\(contactName)'" : "❌ Contact '\(contactName)' not found"
+        }
+        
+        var updateInput = UpdatePersonInput()
+        
+        if let newPhone = args["new_phone"] as? String {
+            updateInput.phone = newPhone
+        }
+        if let newEmail = args["new_email"] as? String {
+            updateInput.email = newEmail
+        }
+        if let newBirthday = args["new_birthday"] as? String {
+            updateInput.birthday = newBirthday
+        }
+        if let newNotes = args["new_notes"] as? String {
+            updateInput.notes = newNotes
+        }
+        
+        do {
+            _ = try await peopleManager.updatePerson(id: person.id, input: updateInput)
+            await peopleManager.fetchPeople()
+            return isHebrew
+                ? "✅ איש הקשר '\(person.fullName)' עודכן בהצלחה"
+                : "✅ Contact '\(person.fullName)' updated successfully"
+        } catch {
+            return isHebrew ? "❌ שגיאה: \(error.localizedDescription)" : "❌ Error: \(error.localizedDescription)"
+        }
+    }
+    
+    private func executeDeleteContact(args: [String: Any]) async -> String {
+        let isHebrew = L10n.shared.currentLanguage == .hebrew
+        let peopleManager = PeopleManager.shared
+        
+        guard let contactName = args["contact_name"] as? String else {
+            return isHebrew ? "חסר שם איש הקשר למחיקה" : "Missing contact name to delete"
+        }
+        
+        // Find the contact by name
+        let searchLower = contactName.lowercased()
+        guard let person = peopleManager.people.first(where: { 
+            $0.firstName.lowercased().contains(searchLower) ||
+            ($0.lastName?.lowercased().contains(searchLower) ?? false) ||
+            $0.fullName.lowercased().contains(searchLower)
+        }) else {
+            return isHebrew ? "❌ לא נמצא איש קשר בשם '\(contactName)'" : "❌ Contact '\(contactName)' not found"
+        }
+        
+        do {
+            try await peopleManager.deletePerson(id: person.id)
+            await peopleManager.fetchPeople()
+            return isHebrew
+                ? "🗑️ איש הקשר '\(person.fullName)' נמחק בהצלחה"
+                : "🗑️ Contact '\(person.fullName)' deleted successfully"
         } catch {
             return isHebrew ? "❌ שגיאה: \(error.localizedDescription)" : "❌ Error: \(error.localizedDescription)"
         }
