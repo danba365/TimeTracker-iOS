@@ -302,77 +302,85 @@ struct TasksView: View {
         let reminders = allItems.filter { $0.taskType == .reminder }
         let tasks = allItems.filter { $0.taskType == .task }
         
-        return ScrollView {
-            LazyVStack(spacing: 12) {
-                // Pull to refresh hint
-                if taskManager.isLoading {
-                    HStack(spacing: 8) {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: Color(hex: "a78bfa")))
-                        Text(L10n.refreshing)
-                            .font(.system(size: 14))
-                            .foregroundColor(Color(hex: "94a3b8"))
-                    }
-                    .padding(.vertical, 8)
+        return List {
+            // Pull to refresh hint
+            if taskManager.isLoading {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: Color(hex: "a78bfa")))
+                    Text(L10n.refreshing)
+                        .font(.system(size: 14))
+                        .foregroundColor(Color(hex: "94a3b8"))
                 }
-                
-                // 🔔 Reminders Section (first, different style)
-                if !reminders.isEmpty {
-                    ForEach(reminders, id: \.id) { reminder in
-                        ReminderRowView(reminder: reminder)
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                Button(role: .destructive) {
-                                    deleteTask(reminder)
-                                } label: {
-                                    Label(L10n.shared.delete, systemImage: "trash")
-                                }
-                            }
+                .padding(.vertical, 8)
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            }
+            
+            // 🔔 Reminders Section (first, different style)
+            ForEach(reminders, id: \.id) { reminder in
+                ReminderRowView(reminder: reminder)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            deleteTask(reminder)
+                        } label: {
+                            Label(L10n.shared.delete, systemImage: "trash")
+                        }
                     }
-                }
-                
-                // 🎉 Events Section (anniversaries, etc.)
-                if !eventsOnSelectedDate.isEmpty {
-                    ForEach(eventsOnSelectedDate, id: \.id) { event in
-                        EventRowView(event: event)
+            }
+            
+            // 🎉 Events Section (anniversaries, etc.)
+            ForEach(eventsOnSelectedDate, id: \.id) { event in
+                EventRowView(event: event)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+            }
+            
+            // 🎂 Birthdays Section
+            ForEach(birthdaysOnSelectedDate, id: \.id) { person in
+                BirthdayRowView(person: person)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+            }
+            
+            if tasks.isEmpty && reminders.isEmpty && birthdaysOnSelectedDate.isEmpty && eventsOnSelectedDate.isEmpty {
+                emptyStateView
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            } else {
+                // Regular tasks (after reminders, events, birthdays)
+                ForEach(tasks, id: \.id) { task in
+                    TaskRowView(task: task) {
+                        toggleTaskStatus(task)
                     }
-                }
-                
-                // 🎂 Birthdays Section
-                if !birthdaysOnSelectedDate.isEmpty {
-                    ForEach(birthdaysOnSelectedDate, id: \.id) { person in
-                        BirthdayRowView(person: person)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            deleteTask(task)
+                        } label: {
+                            Label(L10n.shared.delete, systemImage: "trash")
+                        }
                     }
-                }
-                
-                if tasks.isEmpty && reminders.isEmpty && birthdaysOnSelectedDate.isEmpty && eventsOnSelectedDate.isEmpty {
-                    emptyStateView
-                } else {
-                    // Regular tasks (after reminders, events, birthdays)
-                    ForEach(tasks, id: \.id) { task in
-                        TaskRowView(task: task) {
+                    .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                        Button {
                             toggleTaskStatus(task)
+                        } label: {
+                            Label(task.status == .done ? L10n.shared.undone : L10n.shared.done, systemImage: task.status == .done ? "arrow.uturn.backward" : "checkmark")
                         }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            Button(role: .destructive) {
-                                deleteTask(task)
-                            } label: {
-                                Label(L10n.shared.delete, systemImage: "trash")
-                            }
-                        }
-                        .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                            Button {
-                                toggleTaskStatus(task)
-                            } label: {
-                                Label(task.status == .done ? L10n.shared.undone : L10n.shared.done, systemImage: task.status == .done ? "arrow.uturn.backward" : "checkmark")
-                            }
-                            .tint(task.status == .done ? .orange : .green)
-                        }
+                        .tint(task.status == .done ? .orange : .green)
                     }
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 100) // Space for tab bar
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
         .refreshable {
             // Pull-to-refresh action
             await refreshData()
