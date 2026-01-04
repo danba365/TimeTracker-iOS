@@ -668,10 +668,6 @@ struct ReminderRowView: View {
             }
             
             Spacer()
-            
-            // Bell icon
-            Text("🔔")
-                .font(.system(size: 18))
         }
         .padding(16)
         .background(
