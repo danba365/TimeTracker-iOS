@@ -31,6 +31,7 @@
 		F0377CA10F15503727AE85FA /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A955FC5339920743150036A6 /* SettingsView.swift */; };
 		F282E300B5FF7CE32442566A /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00D5D11E54C27CCBA0960448 /* Config.swift */; };
 		F4C589B73616A8B5BC529A98 /* VoiceState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5EAE457C9906B6A456D2D48 /* VoiceState.swift */; };
+		FCC2ABADBA2DCC0BC9E88868 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DEDCF222DC775249AD1DBDE6 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -56,6 +57,7 @@
 		BD736E1729DABA033318794D /* RealtimeAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeAPIClient.swift; sourceTree = "<group>"; };
 		CC05BCE24353DA1B7E0F2DD0 /* TimeTrackerVoice.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TimeTrackerVoice.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D8C3C8D017C28EC1FC41A04C /* TimeTrackerVoiceApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeTrackerVoiceApp.swift; sourceTree = "<group>"; };
+		DEDCF222DC775249AD1DBDE6 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		E5EAE457C9906B6A456D2D48 /* VoiceState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceState.swift; sourceTree = "<group>"; };
 		E740B278B8A2ECB42B6AEFE7 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
 		E864E346ACAB89104F342E9F /* TaskManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskManager.swift; sourceTree = "<group>"; };
@@ -76,6 +78,7 @@
 		0C79994C598EEACFFCB66D0E /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				DEDCF222DC775249AD1DBDE6 /* Assets.xcassets */,
 				75BE21884DDAC8E10F4EDFCB /* Info.plist */,
 			);
 			path = Resources;
@@ -176,6 +179,7 @@
 			buildConfigurationList = 91AD3A174ED437F654301431 /* Build configuration list for PBXNativeTarget "TimeTrackerVoice" */;
 			buildPhases = (
 				7996794FAB99A0374899081B /* Sources */,
+				34AD9D80DF4E134AB58384CD /* Resources */,
 				0C2152A9DEB9DEAE01907C08 /* Frameworks */,
 			);
 			buildRules = (
@@ -227,6 +231,17 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		34AD9D80DF4E134AB58384CD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FCC2ABADBA2DCC0BC9E88868 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		7996794FAB99A0374899081B /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -274,6 +289,7 @@
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.timetracker.voice;
+				PRODUCT_NAME = Time;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -419,6 +435,7 @@
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.timetracker.voice;
+				PRODUCT_NAME = Time;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
