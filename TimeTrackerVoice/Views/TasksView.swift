@@ -668,6 +668,17 @@ struct ReminderRowView: View {
             }
             
             Spacer()
+            
+            // Teal bell icon on the right
+            ZStack {
+                Circle()
+                    .fill(Color(hex: "06b6d4").opacity(0.3))
+                    .frame(width: 44, height: 44)
+                
+                Image(systemName: "bell.fill")
+                    .font(.system(size: 18))
+                    .foregroundColor(Color(hex: "06b6d4"))
+            }
         }
         .padding(16)
         .background(
