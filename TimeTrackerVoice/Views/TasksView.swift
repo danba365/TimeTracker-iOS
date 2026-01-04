@@ -639,39 +639,7 @@ struct ReminderRowView: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            // Spacer pushes content to the right in RTL
-            Spacer()
-            
-            // Reminder info - next to bell
-            VStack(alignment: .trailing, spacing: 6) {
-                Text(reminder.title)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
-                
-                HStack(spacing: 8) {
-                    // Time with clock icon
-                    if let startTime = reminder.startTime {
-                        HStack(spacing: 4) {
-                            Text(formatTimeWithoutSeconds(startTime))
-                                .font(.system(size: 13, weight: .medium))
-                            Image(systemName: "clock.fill")
-                                .font(.system(size: 11))
-                        }
-                        .foregroundColor(Color(hex: "06b6d4"))
-                    }
-                    
-                    // "תזכורת" badge
-                    Text(L10n.reminder)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(Color(hex: "06b6d4"))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(Color(hex: "06b6d4").opacity(0.15))
-                        .cornerRadius(6)
-                }
-            }
-            
-            // Teal bell icon - on far RIGHT in RTL (Hebrew)
+            // Bell icon (same position as status button in TaskRowView)
             ZStack {
                 Circle()
                     .fill(Color(hex: "1a3a4a"))
@@ -681,9 +649,38 @@ struct ReminderRowView: View {
                     .font(.system(size: 20))
                     .foregroundColor(Color(hex: "06b6d4"))
             }
+            
+            // Reminder info (same alignment as TaskRowView)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(reminder.title)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.white)
+                
+                HStack(spacing: 8) {
+                    if let startTime = reminder.startTime {
+                        HStack(spacing: 4) {
+                            Image(systemName: "clock")
+                                .font(.system(size: 12))
+                            Text(formatTimeWithoutSeconds(startTime))
+                                .font(.system(size: 12))
+                        }
+                        .foregroundColor(Color(hex: "06b6d4"))
+                    }
+                    
+                    // "תזכורת" badge
+                    Text(L10n.reminder)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(Color(hex: "06b6d4"))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color(hex: "06b6d4").opacity(0.2))
+                        .cornerRadius(4)
+                }
+            }
+            
+            Spacer()
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(16)
         .background(Color(hex: "1a2634"))
         .cornerRadius(12)
     }
