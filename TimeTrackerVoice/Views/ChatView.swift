@@ -292,16 +292,15 @@ struct MessageRow: View {
                 }
             }
             
-            VStack(alignment: isHebrew ? .trailing : .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 4) {
                 // Label
                 Text(isUser
                      ? (isHebrew ? "אתה" : "You")
                      : (isHebrew ? "צ'אט אישי" : "ChatGPT"))
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.white)
-                    .frame(maxWidth: .infinity, alignment: isHebrew ? .trailing : .leading)
                 
-                // Content
+                // Content - align text to the right for Hebrew
                 Text(message.content)
                     .font(.system(size: 15))
                     .foregroundColor(Color(hex: "d1d5db"))
@@ -314,13 +313,11 @@ struct MessageRow: View {
                         .font(.system(size: 12))
                         .foregroundColor(.white)
                         .opacity(0.8)
-                        .frame(maxWidth: .infinity, alignment: isHebrew ? .trailing : .leading)
                 }
             }
             
-            Spacer(minLength: 0)
+            Spacer()
         }
-        .environment(\.layoutDirection, isHebrew ? .rightToLeft : .leftToRight)
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
     }
@@ -348,11 +345,10 @@ struct StreamingMessageRow: View {
                     .foregroundColor(.black)
             }
             
-            VStack(alignment: isHebrew ? .trailing : .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(isHebrew ? "צ'אט אישי" : "ChatGPT")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.white)
-                    .frame(maxWidth: .infinity, alignment: isHebrew ? .trailing : .leading)
                 
                 // Blinking cursor
                 Text("●")
@@ -361,12 +357,10 @@ struct StreamingMessageRow: View {
                     .opacity(cursorVisible ? 0.8 : 0.2)
                     .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: cursorVisible)
                     .onAppear { cursorVisible = true }
-                    .frame(maxWidth: .infinity, alignment: isHebrew ? .trailing : .leading)
             }
             
-            Spacer(minLength: 0)
+            Spacer()
         }
-        .environment(\.layoutDirection, isHebrew ? .rightToLeft : .leftToRight)
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
     }
