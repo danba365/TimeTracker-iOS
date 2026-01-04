@@ -324,7 +324,7 @@ struct TasksView: View {
                                 Button(role: .destructive) {
                                     deleteTask(reminder)
                                 } label: {
-                                    Label(L10n.delete, systemImage: "trash")
+                                    Label(L10n.shared.delete, systemImage: "trash")
                                 }
                             }
                     }
@@ -356,14 +356,14 @@ struct TasksView: View {
                             Button(role: .destructive) {
                                 deleteTask(task)
                             } label: {
-                                Label(L10n.delete, systemImage: "trash")
+                                Label(L10n.shared.delete, systemImage: "trash")
                             }
                         }
                         .swipeActions(edge: .leading, allowsFullSwipe: true) {
                             Button {
                                 toggleTaskStatus(task)
                             } label: {
-                                Label(task.status == .done ? L10n.undone : L10n.done, systemImage: task.status == .done ? "arrow.uturn.backward" : "checkmark")
+                                Label(task.status == .done ? L10n.shared.undone : L10n.shared.done, systemImage: task.status == .done ? "arrow.uturn.backward" : "checkmark")
                             }
                             .tint(task.status == .done ? .orange : .green)
                         }
