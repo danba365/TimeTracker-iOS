@@ -639,8 +639,21 @@ struct ReminderRowView: View {
     
     var body: some View {
         HStack(spacing: 12) {
+            // Teal bell icon - at start so it appears on RIGHT in RTL (Hebrew)
+            ZStack {
+                Circle()
+                    .fill(Color(hex: "06b6d4").opacity(0.3))
+                    .frame(width: 44, height: 44)
+                
+                Image(systemName: "bell.fill")
+                    .font(.system(size: 18))
+                    .foregroundColor(Color(hex: "06b6d4"))
+            }
+            
+            Spacer()
+            
             // Reminder info
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .trailing, spacing: 4) {
                 Text(reminder.title)
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.white)
@@ -665,19 +678,6 @@ struct ReminderRowView: View {
                         .background(Color(hex: "06b6d4").opacity(0.2))
                         .cornerRadius(4)
                 }
-            }
-            
-            Spacer()
-            
-            // Teal bell icon on the right
-            ZStack {
-                Circle()
-                    .fill(Color(hex: "06b6d4").opacity(0.3))
-                    .frame(width: 44, height: 44)
-                
-                Image(systemName: "bell.fill")
-                    .font(.system(size: 18))
-                    .foregroundColor(Color(hex: "06b6d4"))
             }
         }
         .padding(16)
