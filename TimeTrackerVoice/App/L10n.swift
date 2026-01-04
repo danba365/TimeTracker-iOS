@@ -70,6 +70,10 @@ final class L10n: ObservableObject {
     var noTasksTitle: String { isHebrew ? "אין משימות ליום זה" : "No tasks for this day" }
     var noTasksSubtitle: String { isHebrew ? "השתמש בקול או בצ'אט להוספת משימות" : "Use voice or chat to add tasks" }
     var reminder: String { isHebrew ? "תזכורת" : "Reminder" }
+    var delete: String { isHebrew ? "מחק" : "Delete" }
+    var undone: String { isHebrew ? "לא בוצע" : "Not Done" }
+    var deleteConfirmTitle: String { isHebrew ? "מחיקת פריט" : "Delete Item" }
+    var deleteConfirmMessage: String { isHebrew ? "האם אתה בטוח שברצונך למחוק פריט זה?" : "Are you sure you want to delete this item?" }
     
     // MARK: - Chat View
     var aiAssistant: String { isHebrew ? "עוזר AI" : "AI Assistant" }
