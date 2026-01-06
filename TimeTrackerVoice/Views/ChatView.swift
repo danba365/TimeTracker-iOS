@@ -1195,20 +1195,41 @@ class ChatManager: ObservableObject {
         let todayTasks = tasks.filter { $0.date == today }
         let upcomingTasks = tasks.filter { $0.date > today }.prefix(10)
         
-        var context = isHebrew ? "משימות היום:\n" : "TODAY'S TASKS:\n"
+        // Separate reminders and tasks
+        let todayReminders = todayTasks.filter { $0.taskType == .reminder }
+        let todayRegularTasks = todayTasks.filter { $0.taskType == .task }
+        
+        var context = isHebrew ? "📋 משימות ותזכורות להיום:\n" : "📋 TODAY'S TASKS & REMINDERS:\n"
+        
         if todayTasks.isEmpty {
-            context += isHebrew ? "אין משימות מתוכננות להיום.\n" : "No tasks scheduled for today.\n"
+            context += isHebrew ? "אין משימות או תזכורות מתוכננות להיום.\n" : "No tasks or reminders scheduled for today.\n"
         } else {
-            for task in todayTasks {
-                let emoji = task.status == .done ? "✅" : "⏳"
-                let time = task.startTime.map { " ב-\($0)" } ?? ""
-                context += "\(emoji) \(task.title)\(time) - \(task.status.rawValue)\n"
+            // Show reminders first
+            if !todayReminders.isEmpty {
+                context += isHebrew ? "\n🔔 תזכורות:\n" : "\n🔔 REMINDERS:\n"
+                for task in todayReminders {
+                    let statusEmoji = task.status == .done ? "✅" : "⏳"
+                    let time = task.startTime.map { isHebrew ? " ב-\($0)" : " at \($0)" } ?? ""
+                    context += "\(statusEmoji) \(task.title)\(time)\n"
+                }
+            }
+            
+            // Then regular tasks
+            if !todayRegularTasks.isEmpty {
+                context += isHebrew ? "\n📝 משימות:\n" : "\n📝 TASKS:\n"
+                for task in todayRegularTasks {
+                    let statusEmoji = task.status == .done ? "✅" : "⏳"
+                    let time = task.startTime.map { isHebrew ? " ב-\($0)" : " at \($0)" } ?? ""
+                    context += "\(statusEmoji) \(task.title)\(time) - \(task.status.rawValue)\n"
+                }
             }
         }
         
-        context += isHebrew ? "\nמשימות קרובות:\n" : "\nUPCOMING TASKS:\n"
+        // Upcoming items
+        context += isHebrew ? "\n📅 משימות ותזכורות קרובות:\n" : "\n📅 UPCOMING TASKS & REMINDERS:\n"
         for task in upcomingTasks {
-            context += "• \(task.title) (\(task.date))\n"
+            let typeIcon = task.taskType == .reminder ? "🔔" : "📝"
+            context += "\(typeIcon) \(task.title) (\(task.date))\n"
         }
         
         let contactsCount = PeopleManager.shared.people.count

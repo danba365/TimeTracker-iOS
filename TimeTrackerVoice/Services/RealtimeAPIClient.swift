@@ -158,35 +158,64 @@ class RealtimeAPIClient: NSObject, ObservableObject {
         
         // Yesterday's tasks (for reference)
         if !yesterdayTasks.isEmpty {
-            context += "YESTERDAY'S TASKS (\(yesterday)):\n"
-            for task in yesterdayTasks {
-                let emoji = task.status == .done ? "✅" : task.status == .missed ? "❌" : "⏳"
-                let time = task.startTime.map { " at \($0)" } ?? ""
-                context += "\(emoji) \(task.title)\(time) - \(task.status.rawValue)\n"
+            let yesterdayReminders = yesterdayTasks.filter { $0.taskType == .reminder }
+            let yesterdayRegularTasks = yesterdayTasks.filter { $0.taskType == .task }
+            
+            context += "YESTERDAY (\(yesterday)):\n"
+            if !yesterdayReminders.isEmpty {
+                context += "🔔 Reminders:\n"
+                for task in yesterdayReminders {
+                    let emoji = task.status == .done ? "✅" : task.status == .missed ? "❌" : "⏳"
+                    let time = task.startTime.map { " at \($0)" } ?? ""
+                    context += "\(emoji) \(task.title)\(time)\n"
+                }
+            }
+            if !yesterdayRegularTasks.isEmpty {
+                context += "📝 Tasks:\n"
+                for task in yesterdayRegularTasks {
+                    let emoji = task.status == .done ? "✅" : task.status == .missed ? "❌" : "⏳"
+                    let time = task.startTime.map { " at \($0)" } ?? ""
+                    context += "\(emoji) \(task.title)\(time) - \(task.status.rawValue)\n"
+                }
             }
             context += "\n"
         }
         
-        // Today's tasks
+        // Today's tasks & reminders
         if !todaysTasks.isEmpty {
-            context += "TODAY'S TASKS:\n"
-            for task in todaysTasks {
-                let emoji = task.status == .done ? "✅" : task.status == .missed ? "❌" : "⏳"
-                let time = task.startTime.map { " at \($0)" } ?? ""
-                context += "\(emoji) \(task.title)\(time) - \(task.status.rawValue)\n"
+            let todayReminders = todaysTasks.filter { $0.taskType == .reminder }
+            let todayRegularTasks = todaysTasks.filter { $0.taskType == .task }
+            
+            context += "TODAY'S TASKS & REMINDERS:\n"
+            if !todayReminders.isEmpty {
+                context += "🔔 Reminders:\n"
+                for task in todayReminders {
+                    let emoji = task.status == .done ? "✅" : task.status == .missed ? "❌" : "⏳"
+                    let time = task.startTime.map { " at \($0)" } ?? ""
+                    context += "\(emoji) \(task.title)\(time)\n"
+                }
+            }
+            if !todayRegularTasks.isEmpty {
+                context += "📝 Tasks:\n"
+                for task in todayRegularTasks {
+                    let emoji = task.status == .done ? "✅" : task.status == .missed ? "❌" : "⏳"
+                    let time = task.startTime.map { " at \($0)" } ?? ""
+                    context += "\(emoji) \(task.title)\(time) - \(task.status.rawValue)\n"
+                }
             }
             context += "\n"
         } else {
-            context += "No tasks scheduled for today.\n\n"
+            context += "No tasks or reminders scheduled for today.\n\n"
         }
         
-        // Upcoming tasks
+        // Upcoming tasks & reminders
         let futureTasks = upcomingTasks.filter { $0.date != today }
         if !futureTasks.isEmpty {
-            context += "UPCOMING TASKS (Next 7 Days):\n"
+            context += "UPCOMING (Next 7 Days):\n"
             for task in futureTasks.prefix(10) {
+                let typeIcon = task.taskType == .reminder ? "🔔" : "📝"
                 let emoji = task.status == .done ? "✅" : "⏳"
-                context += "\(emoji) \(task.title) (\(task.date))\n"
+                context += "\(emoji) \(typeIcon) \(task.title) (\(task.date))\n"
             }
             context += "\n"
         }
