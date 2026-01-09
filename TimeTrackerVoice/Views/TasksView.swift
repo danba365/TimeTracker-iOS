@@ -633,6 +633,13 @@ struct TaskRowView: View {
                         .foregroundColor(Color(hex: "64748b"))
                     }
                     
+                    // Recurring indicator
+                    if task.isRecurring || task.parentTaskId != nil {
+                        Image(systemName: "repeat")
+                            .font(.system(size: 10))
+                            .foregroundColor(Color(hex: "8b5cf6"))
+                    }
+                    
                     priorityBadge
                 }
             }
