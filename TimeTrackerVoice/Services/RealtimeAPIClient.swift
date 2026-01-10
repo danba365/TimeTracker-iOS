@@ -624,14 +624,38 @@ class RealtimeAPIClient: NSObject, ObservableObject {
             let tasks = date != nil ? taskManager.getTasksByDate(date!) : taskManager.getTodaysTasks()
             
             if tasks.isEmpty {
-                return "No tasks found for the specified date."
+                return "No tasks or reminders found for the specified date."
             }
             
-            return tasks.map { task in
-                let emoji = task.status == .done ? "✅" : task.status == .missed ? "❌" : "⏳"
-                let time = task.startTime.map { " at \($0)" } ?? ""
-                return "\(emoji) \(task.title)\(time) - \(task.status.rawValue)"
-            }.joined(separator: "\n")
+            // Separate reminders and tasks
+            let reminders = tasks.filter { $0.taskType == .reminder }
+            let regularTasks = tasks.filter { $0.taskType == .task }
+            
+            var result = ""
+            
+            // Reminders section
+            if !reminders.isEmpty {
+                result += "🔔 REMINDERS:\n"
+                result += reminders.map { task in
+                    let emoji = task.status == .done ? "✅" : task.status == .missed ? "❌" : "⏳"
+                    let time = task.startTime.map { " at \($0)" } ?? ""
+                    return "\(emoji) \(task.title)\(time)"
+                }.joined(separator: "\n")
+            }
+            
+            // Tasks section
+            if !regularTasks.isEmpty {
+                if !reminders.isEmpty { result += "\n\n" }
+                result += "📝 TASKS:\n"
+                result += regularTasks.map { task in
+                    let emoji = task.status == .done ? "✅" : task.status == .missed ? "❌" : "⏳"
+                    let time = task.startTime.map { " at \($0)" } ?? ""
+                    return "\(emoji) \(task.title)\(time) - \(task.status.rawValue)"
+                }.joined(separator: "\n")
+            }
+            
+            result += "\n\n📊 Total: \(reminders.count) reminders, \(regularTasks.count) tasks"
+            return result
             
         case "create_task":
             guard let title = args["title"] as? String,

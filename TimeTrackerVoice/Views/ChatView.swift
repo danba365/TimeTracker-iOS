@@ -810,15 +810,40 @@ class ChatManager: ObservableObject {
         let tasks = taskManager.getTasksInRange(startDate: startDate, endDate: endDate)
         
         if tasks.isEmpty {
-            return isHebrew ? "אין משימות בתאריכים אלו" : "No tasks found for these dates"
+            return isHebrew ? "אין משימות או תזכורות בתאריכים אלו" : "No tasks or reminders found for these dates"
         }
         
-        var result = isHebrew ? "משימות:\n" : "Tasks:\n"
-        for task in tasks {
-            let emoji = task.status == TaskStatus.done ? "✅" : "⏳"
-            let time = task.startTime.map { " ב-\($0)" } ?? ""
-            result += "\(emoji) \(task.title) (\(task.date))\(time)\n"
+        // Separate reminders and tasks
+        let reminders = tasks.filter { $0.taskType == .reminder }
+        let regularTasks = tasks.filter { $0.taskType == .task }
+        
+        var result = ""
+        
+        // Reminders section
+        if !reminders.isEmpty {
+            result += isHebrew ? "🔔 תזכורות:\n" : "🔔 REMINDERS:\n"
+            for task in reminders {
+                let emoji = task.status == .done ? "✅" : "⏳"
+                let time = task.startTime.map { isHebrew ? " ב-\($0)" : " at \($0)" } ?? ""
+                result += "\(emoji) \(task.title) (\(task.date))\(time)\n"
+            }
         }
+        
+        // Tasks section
+        if !regularTasks.isEmpty {
+            if !reminders.isEmpty { result += "\n" }
+            result += isHebrew ? "📝 משימות:\n" : "📝 TASKS:\n"
+            for task in regularTasks {
+                let emoji = task.status == .done ? "✅" : "⏳"
+                let time = task.startTime.map { isHebrew ? " ב-\($0)" : " at \($0)" } ?? ""
+                result += "\(emoji) \(task.title) (\(task.date))\(time) - \(task.status.rawValue)\n"
+            }
+        }
+        
+        // Summary
+        result += isHebrew
+            ? "\n📊 סה\"כ: \(reminders.count) תזכורות, \(regularTasks.count) משימות"
+            : "\n📊 Total: \(reminders.count) reminders, \(regularTasks.count) tasks"
         
         return result
     }
