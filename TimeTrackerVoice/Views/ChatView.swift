@@ -5,6 +5,7 @@ struct ChatView: View {
     @EnvironmentObject var taskManager: TaskManager
     @StateObject private var chatManager = ChatManager()
     @StateObject private var keyboardObserver = KeyboardObserver()
+    @StateObject private var speechRecognizer = SpeechRecognizer()
     
     @State private var messageText = ""
     @State private var showingAPIKeyAlert = false
@@ -198,10 +199,12 @@ struct ChatView: View {
     
     private var inputBarView: some View {
         HStack(spacing: 8) {
-            // Text field
+            // Text field - shows speech transcript while recording
             TextField(
-                L10n.shared.currentLanguage == .hebrew ? "הודעה" : "Message",
-                text: $messageText
+                speechRecognizer.isRecording 
+                    ? (L10n.shared.currentLanguage == .hebrew ? "מקליט..." : "Recording...")
+                    : (L10n.shared.currentLanguage == .hebrew ? "הודעה" : "Message"),
+                text: speechRecognizer.isRecording ? $speechRecognizer.transcript : $messageText
             )
             .textFieldStyle(.plain)
             .font(.system(size: 16))
@@ -210,6 +213,21 @@ struct ChatView: View {
             .focused($isInputFocused)
             .submitLabel(.send)
             .onSubmit { sendCurrentMessage() }
+            .disabled(speechRecognizer.isRecording)
+            
+            // Microphone button
+            Button(action: toggleSpeechRecording) {
+                ZStack {
+                    Circle()
+                        .fill(speechRecognizer.isRecording ? Color.red : Color(hex: "3a3a3a"))
+                        .frame(width: 28, height: 28)
+                    
+                    Image(systemName: speechRecognizer.isRecording ? "stop.fill" : "mic.fill")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.white)
+                }
+            }
+            .disabled(!speechRecognizer.isAvailable && !speechRecognizer.isRecording)
             
             // Send button
             Button(action: sendCurrentMessage) {
@@ -233,16 +251,36 @@ struct ChatView: View {
                 .fill(Color.white.opacity(0.08))
                 .overlay(
                     Capsule()
-                        .stroke(Color(hex: "a78bfa").opacity(0.3), lineWidth: 1)
+                        .stroke(speechRecognizer.isRecording 
+                            ? Color.red.opacity(0.5) 
+                            : Color(hex: "a78bfa").opacity(0.3), lineWidth: 1)
                 )
         )
         .frame(height: 40)
+        .animation(.easeInOut(duration: 0.2), value: speechRecognizer.isRecording)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
     }
     
     private var canSend: Bool {
-        !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !chatManager.isLoading
+        let text = speechRecognizer.isRecording ? speechRecognizer.transcript : messageText
+        return !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !chatManager.isLoading
+    }
+    
+    // MARK: - Speech Recording
+    
+    private func toggleSpeechRecording() {
+        if speechRecognizer.isRecording {
+            // Stop recording and transfer transcript to message
+            speechRecognizer.stopRecording()
+            if !speechRecognizer.transcript.isEmpty {
+                messageText = speechRecognizer.transcript
+            }
+        } else {
+            // Start recording
+            messageText = "" // Clear existing text
+            speechRecognizer.startRecording()
+        }
     }
     
     // MARK: - Actions
