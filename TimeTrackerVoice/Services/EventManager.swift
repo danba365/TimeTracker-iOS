@@ -2,6 +2,7 @@ import Foundation
 import Combine
 
 /// Manages events (anniversaries, etc.) from Supabase
+@MainActor
 class EventManager: ObservableObject {
     static let shared = EventManager()
     
@@ -57,7 +58,6 @@ class EventManager: ObservableObject {
     
     // MARK: - Fetch Events
     
-    @MainActor
     func fetchEvents() async {
         guard let token = await AuthManager.shared.getAccessToken() else {
             print("❌ Not authenticated to fetch events")
@@ -99,7 +99,6 @@ class EventManager: ObservableObject {
     
     // MARK: - Create Event
     
-    @MainActor
     func createEvent(_ input: CreateEventInput) async throws -> Event {
         guard let token = await AuthManager.shared.getAccessToken() else {
             throw EventError.notAuthenticated
@@ -135,7 +134,6 @@ class EventManager: ObservableObject {
     
     // MARK: - Update Event
     
-    @MainActor
     func updateEvent(id: String, input: UpdateEventInput) async throws -> Event {
         guard let token = await AuthManager.shared.getAccessToken() else {
             throw EventError.notAuthenticated
@@ -173,7 +171,6 @@ class EventManager: ObservableObject {
     
     // MARK: - Delete Event
     
-    @MainActor
     func deleteEvent(id: String) async throws {
         guard let token = await AuthManager.shared.getAccessToken() else {
             throw EventError.notAuthenticated
