@@ -5,6 +5,7 @@ struct TasksView: View {
     @EnvironmentObject var taskManager: TaskManager
     @EnvironmentObject var peopleManager: PeopleManager
     @EnvironmentObject var eventManager: EventManager
+    @ObservedObject private var networkMonitor = NetworkMonitor.shared
     @State private var selectedDate = Date()
     @State private var showingAddTask = false
     @GestureState private var dragOffset: CGFloat = 0
@@ -132,8 +133,8 @@ struct TasksView: View {
     
     private var headerView: some View {
         VStack(spacing: 8) {
-            // Offline indicator
-            if taskManager.isOffline {
+            // Offline indicator - only show when truly no network
+            if !networkMonitor.isConnected {
                 HStack(spacing: 6) {
                     Image(systemName: "wifi.slash")
                         .font(.system(size: 12))

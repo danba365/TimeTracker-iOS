@@ -10,7 +10,12 @@ class TaskManager: ObservableObject {
     @Published var isLoading = false
     @Published var error: String?
     @Published var lastSyncDate: Date?
-    @Published var isOffline = false
+    @Published var hasAPIError = false  // For API errors (not network issues)
+    
+    /// True offline status from NetworkMonitor
+    var isOffline: Bool {
+        !NetworkMonitor.shared.isConnected
+    }
     
     // Cache keys
     private let tasksKey = "cached_tasks"
@@ -140,7 +145,7 @@ class TaskManager: ObservableObject {
                     } else {
                         print("❌ Token refresh failed - please log in again")
                         self.error = "Session expired. Please log in again."
-                        isOffline = true
+                        hasAPIError = true
                         return
                     }
                 }
@@ -155,7 +160,7 @@ class TaskManager: ObservableObject {
                         print("❌ HTTP Error: \(httpResponse.statusCode)")
                         self.error = "Server error: \(httpResponse.statusCode)"
                     }
-                    isOffline = true
+                    hasAPIError = true
                     return
                 }
             }
@@ -179,12 +184,12 @@ class TaskManager: ObservableObject {
             
             // ✅ Save to cache after successful fetch
             saveTasksToCache()
-            isOffline = false
+            hasAPIError = false
             
             print("✅ Fetched \(tasks.count) tasks from server")
         } catch {
             self.error = error.localizedDescription
-            isOffline = true
+            hasAPIError = true
             print("❌ Error fetching tasks: \(error)")
             
             // Debug: Print raw response to see what we got

@@ -7,7 +7,12 @@ class EventManager: ObservableObject {
     
     @Published var events: [Event] = []
     @Published var isLoading = false
-    @Published var isOffline = false
+    @Published var hasAPIError = false
+    
+    /// True offline status from NetworkMonitor
+    var isOffline: Bool {
+        !NetworkMonitor.shared.isConnected
+    }
     
     private let eventsKey = "cached_events"
     private let lastSyncKey = "events_last_sync"
@@ -56,7 +61,7 @@ class EventManager: ObservableObject {
     func fetchEvents() async {
         guard let token = await AuthManager.shared.getAccessToken() else {
             print("❌ Not authenticated to fetch events")
-            isOffline = true
+            hasAPIError = true
             return
         }
         
@@ -79,13 +84,13 @@ class EventManager: ObservableObject {
             let fetchedEvents = try JSONDecoder().decode([Event].self, from: data)
             
             self.events = fetchedEvents
-            self.isOffline = false
+            self.hasAPIError = false
             saveEventsToCache()
             
             print("✅ Fetched \(fetchedEvents.count) events from server")
         } catch {
             print("❌ Error fetching events: \(error)")
-            isOffline = true
+            hasAPIError = true
             // Keep using cached data
         }
         

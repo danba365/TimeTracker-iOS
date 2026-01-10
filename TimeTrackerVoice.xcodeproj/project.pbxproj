@@ -16,6 +16,7 @@
 		55072B4139C290332D72EEB0 /* PromptManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FDA47019FA9E3F0535A5A64 /* PromptManager.swift */; };
 		69D99FBFA5CADD16244BD637 /* Task.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78439F0D6785C0874C264021 /* Task.swift */; };
 		747020AB23CEDE8553123EA3 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CBBA4C145D6716BB9707F68 /* ChatView.swift */; };
+		819277D28E4F0542F50FAA2A /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E971B5A76212F07EF0FCB5F /* NetworkMonitor.swift */; };
 		916CE8AD66B97952C5DD5B4B /* VoiceOrbView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9591C4C54EC4F7124AE2508 /* VoiceOrbView.swift */; };
 		96F45E29A73F59EEBF2115DE /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B45E0C0F046463E901D90CF /* AuthView.swift */; };
 		9A2C5E19797E468358A02D1C /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = FA6C910AE786FCA67615A724 /* GoogleSignIn */; };
@@ -50,6 +51,7 @@
 		78439F0D6785C0874C264021 /* Task.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Task.swift; sourceTree = "<group>"; };
 		8AB28059F207891C60A96719 /* ContactsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsView.swift; sourceTree = "<group>"; };
 		8CCDEEFF3DADEBCC51030F10 /* VoiceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceView.swift; sourceTree = "<group>"; };
+		8E971B5A76212F07EF0FCB5F /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		93AEE3C5DF82B5247400C763 /* KeyboardObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardObserver.swift; sourceTree = "<group>"; };
 		A955FC5339920743150036A6 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		B9591C4C54EC4F7124AE2508 /* VoiceOrbView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceOrbView.swift; sourceTree = "<group>"; };
@@ -159,6 +161,7 @@
 			isa = PBXGroup;
 			children = (
 				93AEE3C5DF82B5247400C763 /* KeyboardObserver.swift */,
+				8E971B5A76212F07EF0FCB5F /* NetworkMonitor.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -258,6 +261,7 @@
 				449FDE63FAD45B47FB34141E /* KeyboardObserver.swift in Sources */,
 				4F7F7EBEFACCE6366F5CC214 /* L10n.swift in Sources */,
 				9A430235AECA4C69410072E4 /* MainTabView.swift in Sources */,
+				819277D28E4F0542F50FAA2A /* NetworkMonitor.swift in Sources */,
 				ED552C106B5A3A2A11BC4E9E /* PeopleManager.swift in Sources */,
 				AF2E3F7E65C7E864E2FFADE2 /* Person.swift in Sources */,
 				55072B4139C290332D72EEB0 /* PromptManager.swift in Sources */,
