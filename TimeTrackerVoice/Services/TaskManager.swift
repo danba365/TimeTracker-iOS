@@ -118,7 +118,13 @@ class TaskManager: ObservableObject {
         let endStr = formatter.string(from: endDate)
         
         do {
-            let url = URL(string: "\(Config.supabaseURL)/rest/v1/tasks?date=gte.\(startStr)&date=lte.\(endStr)&order=date.asc,start_time.asc")!
+            // Get user_id for filtering - only fetch tasks belonging to this user
+            guard let userId = AuthManager.shared.currentUser?.id else {
+                print("⚠️ No user_id available - cannot fetch tasks")
+                return
+            }
+            
+            let url = URL(string: "\(Config.supabaseURL)/rest/v1/tasks?user_id=eq.\(userId)&date=gte.\(startStr)&date=lte.\(endStr)&order=date.asc,start_time.asc")!
             var request = URLRequest(url: url)
             request.timeoutInterval = 10 // 10 second timeout
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")

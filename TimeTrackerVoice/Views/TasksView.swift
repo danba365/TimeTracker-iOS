@@ -435,32 +435,8 @@ struct TasksView: View {
         formatter.dateFormat = "yyyy-MM-dd"
         let dateStr = formatter.string(from: date)
         
-        let tasksForDate = taskManager.tasks.filter { $0.date == dateStr }
-        
-        // Count visible tasks (using same filtering logic)
-        let visibleTasks = tasksForDate.filter { task in
-            // Hide tasks without parentTaskId if there's a duplicate with parentTaskId
-            if task.parentTaskId == nil {
-                let hasDuplicateInstance = tasksForDate.contains { otherTask in
-                    otherTask.id != task.id &&
-                    otherTask.title == task.title &&
-                    otherTask.parentTaskId != nil
-                }
-                if hasDuplicateInstance { return false }
-            }
-            
-            // Hide recurring parents if instance exists
-            if task.isRecurring && task.parentTaskId == nil {
-                let hasInstance = taskManager.tasks.contains { otherTask in
-                    otherTask.parentTaskId == task.id && otherTask.date == dateStr
-                }
-                if hasInstance { return false }
-            }
-            
-            return true
-        }
-        
-        return !visibleTasks.isEmpty
+        // Show ALL tasks for this date - no filtering
+        return taskManager.tasks.contains { $0.date == dateStr }
     }
     
     private func getTasksForSelectedDate() -> [TaskItem] {
@@ -468,48 +444,11 @@ struct TasksView: View {
         formatter.dateFormat = "yyyy-MM-dd"
         let dateStr = formatter.string(from: selectedDate)
         
-        // Get all tasks for this date
-        let tasksForDate = taskManager.tasks.filter { $0.date == dateStr }
-        print("🔍 [TasksView] Date: \(dateStr), Found \(tasksForDate.count) tasks")
-        
-        let filtered = tasksForDate
-            .filter { task in
-                print("   🔍 Checking: '\(task.title)' | isRecurring=\(task.isRecurring) | parentTaskId=\(task.parentTaskId ?? "nil")")
-                
-                // Strategy: If this task has NO parentTaskId, check if there's
-                // another task with the SAME title that HAS a parentTaskId.
-                // If so, hide this one (show the instance instead of the parent)
-                if task.parentTaskId == nil {
-                    let hasDuplicateInstance = tasksForDate.contains { otherTask in
-                        otherTask.id != task.id &&
-                        otherTask.title == task.title &&
-                        otherTask.parentTaskId != nil
-                    }
-                    
-                    if hasDuplicateInstance {
-                        print("   🔍 -> HIDDEN: Found instance with same title, hiding parent")
-                        return false
-                    }
-                }
-                
-                // Also check original logic for recurring parents
-                if task.isRecurring && task.parentTaskId == nil {
-                    let hasInstance = taskManager.tasks.contains { otherTask in
-                        otherTask.parentTaskId == task.id && otherTask.date == dateStr
-                    }
-                    if hasInstance {
-                        print("   🔍 -> HIDDEN: Recurring parent with instance")
-                        return false
-                    }
-                }
-                
-                print("   🔍 -> Showing task")
-                return true
-            }
+        // Show ALL tasks for this date - no name-based filtering
+        // Both recurring parents and instances will be displayed
+        return taskManager.tasks
+            .filter { $0.date == dateStr }
             .sorted { ($0.startTime ?? "") < ($1.startTime ?? "") }
-        
-        print("🔍 [TasksView] Filtered to \(filtered.count) visible tasks")
-        return filtered
     }
     
     private func toggleTaskStatus(_ task: TaskItem) {
