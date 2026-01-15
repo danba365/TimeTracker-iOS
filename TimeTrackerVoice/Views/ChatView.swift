@@ -490,12 +490,17 @@ class ChatManager: ObservableObject {
                 "type": "function",
                 "function": [
                     "name": "get_tasks",
-                    "description": "Get tasks for a specific date or date range",
+                    "description": "Get tasks and/or reminders for a specific date or date range. Use task_type to filter: 'reminder' for תזכורות only, 'task' for משימות only, 'all' for both.",
                     "parameters": [
                         "type": "object",
                         "properties": [
                             "start_date": ["type": "string", "description": "Start date in YYYY-MM-DD format"],
-                            "end_date": ["type": "string", "description": "End date in YYYY-MM-DD format (optional)"]
+                            "end_date": ["type": "string", "description": "End date in YYYY-MM-DD format (optional)"],
+                            "task_type": [
+                                "type": "string",
+                                "enum": ["task", "reminder", "all"],
+                                "description": "Filter by type: 'reminder' for reminders/תזכורות only, 'task' for tasks/משימות only, 'all' for both. Default is 'all'."
+                            ]
                         ],
                         "required": ["start_date"]
                     ]
@@ -657,6 +662,47 @@ class ChatManager: ObservableObject {
         ]
     }
     
+    // MARK: - Date Helper
+    
+    /// Calculate key dates for the AI to use consistently
+    private func getDateContext() -> (today: String, tomorrow: String, thisWeekStart: String, thisWeekEnd: String, nextWeekStart: String, nextWeekEnd: String, dayName: String) {
+        let calendar = Calendar.current
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        
+        let today = Date()
+        let todayStr = formatter.string(from: today)
+        
+        // Tomorrow
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: today)!
+        let tomorrowStr = formatter.string(from: tomorrow)
+        
+        // This week (Sunday to Saturday)
+        let weekday = calendar.component(.weekday, from: today)
+        let daysFromSunday = weekday - 1 // Sunday = 1
+        let thisWeekStart = calendar.date(byAdding: .day, value: -daysFromSunday, to: today)!
+        let thisWeekEnd = calendar.date(byAdding: .day, value: 6 - daysFromSunday, to: today)!
+        
+        // Next week (following Sunday to Saturday)
+        let nextWeekStart = calendar.date(byAdding: .day, value: 7 - daysFromSunday, to: today)!
+        let nextWeekEnd = calendar.date(byAdding: .day, value: 13 - daysFromSunday, to: today)!
+        
+        // Day name
+        let dayFormatter = DateFormatter()
+        dayFormatter.dateFormat = "EEEE"
+        let dayName = dayFormatter.string(from: today)
+        
+        return (
+            today: todayStr,
+            tomorrow: tomorrowStr,
+            thisWeekStart: formatter.string(from: thisWeekStart),
+            thisWeekEnd: formatter.string(from: thisWeekEnd),
+            nextWeekStart: formatter.string(from: nextWeekStart),
+            nextWeekEnd: formatter.string(from: nextWeekEnd),
+            dayName: dayName
+        )
+    }
+    
     // MARK: - API Call with Tools
     
     private func callOpenAIWithTools(message: String, tasks: [TaskItem]) async throws -> String {
@@ -668,15 +714,25 @@ class ChatManager: ObservableObject {
         
         let taskContext = buildTaskContext(tasks: tasks)
         let isHebrew = L10n.shared.currentLanguage == .hebrew
+        let dates = getDateContext()
         
         let systemPrompt = isHebrew ? """
         אתה עוזר AI ידידותי לאפליקציית TimeTracker. עזור למשתמשים לנהל משימות, תזכורות, אנשי קשר ואירועים.
         היה תמציתי וידידותי. דבר בעברית.
         
-        תאריך נוכחי: \(Date().formatted(date: .complete, time: .omitted))
+        📅 תאריכים חשובים (השתמש בתאריכים אלו בדיוק!):
+        - היום: \(dates.today) (\(dates.dayName))
+        - מחר: \(dates.tomorrow)
+        - השבוע הנוכחי: \(dates.thisWeekStart) עד \(dates.thisWeekEnd)
+        - שבוע הבא: \(dates.nextWeekStart) עד \(dates.nextWeekEnd)
+        
+        ⚠️ חשוב מאוד:
+        - כשהמשתמש אומר "שבוע הבא" - השתמש בתאריכים \(dates.nextWeekStart) עד \(dates.nextWeekEnd)
+        - כשהמשתמש שואל על "תזכורות" בלבד - השתמש ב-task_type: "reminder"
+        - כשהמשתמש שואל על "משימות" בלבד - השתמש ב-task_type: "task"
         
         יש לך גישה לכלים הבאים:
-        - get_tasks: קבל משימות לתאריך או טווח תאריכים
+        - get_tasks: קבל משימות/תזכורות לתאריך או טווח (השתמש ב-task_type לסינון!)
         - create_task: צור משימה או תזכורת חדשה
         - update_task: עדכן משימה קיימת (שנה כותרת, תאריך, שעה, סטטוס)
         - delete_task: מחק משימה או תזכורת
@@ -686,18 +742,25 @@ class ChatManager: ObservableObject {
         - delete_contact: מחק איש קשר
         - get_events: קבל אירועים שנתיים כמו ימי נישואין, ימי הולדת ואירועים מותאמים
         
-        חשוב: כשהמשתמש מבקש למחוק או לעדכן, השתמש בכלים המתאימים!
-        
         הקשר המשימות הנוכחי:
         \(taskContext)
         """ : """
         You are a helpful AI assistant for TimeTracker. Help users manage tasks, reminders, contacts, and events.
         Be concise and friendly.
         
-        Current date: \(Date().formatted(date: .complete, time: .omitted))
+        📅 Important dates (use these exact dates!):
+        - Today: \(dates.today) (\(dates.dayName))
+        - Tomorrow: \(dates.tomorrow)
+        - This week: \(dates.thisWeekStart) to \(dates.thisWeekEnd)
+        - Next week: \(dates.nextWeekStart) to \(dates.nextWeekEnd)
+        
+        ⚠️ Important:
+        - When user says "next week" - use dates \(dates.nextWeekStart) to \(dates.nextWeekEnd)
+        - When user asks about "reminders" only - use task_type: "reminder"
+        - When user asks about "tasks" only - use task_type: "task"
         
         You have access to these tools:
-        - get_tasks: Get tasks for a date or date range
+        - get_tasks: Get tasks/reminders for a date or date range (use task_type to filter!)
         - create_task: Create a new task or reminder
         - update_task: Update an existing task (change title, date, time, status)
         - delete_task: Delete a task or reminder
@@ -706,8 +769,6 @@ class ChatManager: ObservableObject {
         - update_contact: Update contact details
         - delete_contact: Delete a contact
         - get_events: Get recurring events like anniversaries, birthdays, and custom events
-        
-        Important: When user asks to delete or update, use the appropriate tools!
         
         Current task context:
         \(taskContext)
@@ -845,19 +906,38 @@ class ChatManager: ObservableObject {
         }
         
         let endDate = args["end_date"] as? String ?? startDate
-        let tasks = taskManager.getTasksInRange(startDate: startDate, endDate: endDate)
+        let taskTypeFilter = args["task_type"] as? String ?? "all"
         
-        if tasks.isEmpty {
-            return isHebrew ? "אין משימות או תזכורות בתאריכים אלו" : "No tasks or reminders found for these dates"
+        var tasks = taskManager.getTasksInRange(startDate: startDate, endDate: endDate)
+        
+        // Apply task_type filter
+        switch taskTypeFilter {
+        case "reminder":
+            tasks = tasks.filter { $0.taskType == .reminder }
+        case "task":
+            tasks = tasks.filter { $0.taskType == .task }
+        default: // "all"
+            break
         }
         
-        // Separate reminders and tasks
+        if tasks.isEmpty {
+            switch taskTypeFilter {
+            case "reminder":
+                return isHebrew ? "אין תזכורות בתאריכים אלו" : "No reminders found for these dates"
+            case "task":
+                return isHebrew ? "אין משימות בתאריכים אלו" : "No tasks found for these dates"
+            default:
+                return isHebrew ? "אין משימות או תזכורות בתאריכים אלו" : "No tasks or reminders found for these dates"
+            }
+        }
+        
+        // Separate reminders and tasks for display
         let reminders = tasks.filter { $0.taskType == .reminder }
         let regularTasks = tasks.filter { $0.taskType == .task }
         
         var result = ""
         
-        // Reminders section
+        // Reminders section (only show if we have reminders and filter allows)
         if !reminders.isEmpty {
             result += isHebrew ? "🔔 תזכורות:\n" : "🔔 REMINDERS:\n"
             for task in reminders {
@@ -867,7 +947,7 @@ class ChatManager: ObservableObject {
             }
         }
         
-        // Tasks section
+        // Tasks section (only show if we have tasks and filter allows)
         if !regularTasks.isEmpty {
             if !reminders.isEmpty { result += "\n" }
             result += isHebrew ? "📝 משימות:\n" : "📝 TASKS:\n"
@@ -878,10 +958,21 @@ class ChatManager: ObservableObject {
             }
         }
         
-        // Summary
-        result += isHebrew
-            ? "\n📊 סה\"כ: \(reminders.count) תזכורות, \(regularTasks.count) משימות"
-            : "\n📊 Total: \(reminders.count) reminders, \(regularTasks.count) tasks"
+        // Summary based on filter
+        switch taskTypeFilter {
+        case "reminder":
+            result += isHebrew
+                ? "\n📊 סה\"כ: \(reminders.count) תזכורות"
+                : "\n📊 Total: \(reminders.count) reminders"
+        case "task":
+            result += isHebrew
+                ? "\n📊 סה\"כ: \(regularTasks.count) משימות"
+                : "\n📊 Total: \(regularTasks.count) tasks"
+        default:
+            result += isHebrew
+                ? "\n📊 סה\"כ: \(reminders.count) תזכורות, \(regularTasks.count) משימות"
+                : "\n📊 Total: \(reminders.count) reminders, \(regularTasks.count) tasks"
+        }
         
         return result
     }
