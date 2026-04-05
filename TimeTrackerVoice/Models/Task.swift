@@ -14,7 +14,7 @@ enum TaskStatus: String, Codable, CaseIterable {
 }
 
 enum TaskType: String, Codable {
-    case task, reminder
+    case task, reminder, idea
 }
 
 struct TaskItem: Identifiable, Codable {

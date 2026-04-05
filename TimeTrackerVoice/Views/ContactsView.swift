@@ -36,50 +36,53 @@ struct ContactsView: View {
     }
     
     var body: some View {
-        ZStack {
-            // Background
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color(hex: "1a1a2e"),
-                    Color(hex: "16213e"),
-                    Color(hex: "0f0f23")
-                ]),
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
+        NavigationStack {
+            ZStack {
+                // Background
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color(hex: "1a1a2e"),
+                        Color(hex: "16213e"),
+                        Color(hex: "0f0f23")
+                    ]),
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+                .onTapGesture {
+                    isSearchFocused = false
+                }
+                
+                VStack(spacing: 0) {
+                    // Header
+                    headerView
+                    
+                    // Filter chips
+                    filterChipsView
+                    
+                    // Search bar
+                    searchBarView
+                    
+                    // Contacts list
+                    if peopleManager.isLoading {
+                        Spacer()
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        Spacer()
+                    } else {
+                        contactsListView
+                    }
+                }
+            }
             .onTapGesture {
                 isSearchFocused = false
             }
-            
-            VStack(spacing: 0) {
-                // Header
-                headerView
-                
-                // Filter chips
-                filterChipsView
-                
-                // Search bar
-                searchBarView
-                
-                // Contacts list
-                if peopleManager.isLoading {
-                    Spacer()
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                    Spacer()
-                } else {
-                    contactsListView
+            .onAppear {
+                Task {
+                    await peopleManager.fetchPeople()
                 }
             }
-        }
-        .onTapGesture {
-            isSearchFocused = false
-        }
-        .onAppear {
-            Task {
-                await peopleManager.fetchPeople()
-            }
+            .navigationBarHidden(true)
         }
     }
     
@@ -222,7 +225,10 @@ struct ContactsView: View {
                     emptyStateView
                 } else {
                     ForEach(filteredPeople, id: \.id) { person in
-                        ContactRowView(person: person)
+                        NavigationLink(destination: ContactDetailView(person: person)) {
+                            ContactRowView(person: person)
+                        }
+                        .buttonStyle(PlainButtonStyle())
                     }
                 }
             }
@@ -252,7 +258,10 @@ struct ContactsView: View {
             .padding(.top, 8)
             
             ForEach(upcomingBirthdays.prefix(3), id: \.id) { person in
-                UpcomingBirthdayRow(person: person)
+                NavigationLink(destination: ContactDetailView(person: person)) {
+                    UpcomingBirthdayRow(person: person)
+                }
+                .buttonStyle(PlainButtonStyle())
             }
         }
         .padding(.bottom, 8)

@@ -665,13 +665,18 @@ class ChatManager: ObservableObject {
     // MARK: - Date Helper
     
     /// Calculate key dates for the AI to use consistently
-    private func getDateContext() -> (today: String, tomorrow: String, thisWeekStart: String, thisWeekEnd: String, nextWeekStart: String, nextWeekEnd: String, dayName: String) {
+    private func getDateContext() -> (today: String, tomorrow: String, thisWeekStart: String, thisWeekEnd: String, nextWeekStart: String, nextWeekEnd: String, dayName: String, currentTime: String) {
         let calendar = Calendar.current
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         
         let today = Date()
         let todayStr = formatter.string(from: today)
+        
+        // Current local time
+        let timeFormatter = DateFormatter()
+        timeFormatter.dateFormat = "HH:mm"
+        let currentTime = timeFormatter.string(from: today)
         
         // Tomorrow
         let tomorrow = calendar.date(byAdding: .day, value: 1, to: today)!
@@ -699,7 +704,8 @@ class ChatManager: ObservableObject {
             thisWeekEnd: formatter.string(from: thisWeekEnd),
             nextWeekStart: formatter.string(from: nextWeekStart),
             nextWeekEnd: formatter.string(from: nextWeekEnd),
-            dayName: dayName
+            dayName: dayName,
+            currentTime: currentTime
         )
     }
     
@@ -722,6 +728,7 @@ class ChatManager: ObservableObject {
         
         📅 תאריכים חשובים (השתמש בתאריכים אלו בדיוק!):
         - היום: \(dates.today) (\(dates.dayName))
+        - השעה הנוכחית: \(dates.currentTime)
         - מחר: \(dates.tomorrow)
         - השבוע הנוכחי: \(dates.thisWeekStart) עד \(dates.thisWeekEnd)
         - שבוע הבא: \(dates.nextWeekStart) עד \(dates.nextWeekEnd)
@@ -750,6 +757,7 @@ class ChatManager: ObservableObject {
         
         📅 Important dates (use these exact dates!):
         - Today: \(dates.today) (\(dates.dayName))
+        - Current time: \(dates.currentTime)
         - Tomorrow: \(dates.tomorrow)
         - This week: \(dates.thisWeekStart) to \(dates.thisWeekEnd)
         - Next week: \(dates.nextWeekStart) to \(dates.nextWeekEnd)

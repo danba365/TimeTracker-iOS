@@ -17,6 +17,7 @@ struct Person: Identifiable, Codable {
     var relationshipType: RelationshipType
     var relationshipDetail: String?
     var phone: String?
+    var mobile: String?
     var email: String?
     var birthday: String?  // YYYY-MM-DD
     var anniversary: String?
@@ -26,7 +27,7 @@ struct Person: Identifiable, Codable {
     var updatedAt: String
     
     enum CodingKeys: String, CodingKey {
-        case id, nickname, phone, email, birthday, anniversary, notes
+        case id, nickname, phone, mobile, email, birthday, anniversary, notes
         case firstName = "first_name"
         case lastName = "last_name"
         case relationshipType = "relationship_type"

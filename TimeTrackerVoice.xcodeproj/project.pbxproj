@@ -11,6 +11,7 @@
 		074830BC46C4B4C9BF728030 /* EventManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18540623942D6EA0151F7DF0 /* EventManager.swift */; };
 		1E41C54FF5AB30F421AB9E3E /* SpeechRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DDA6543A138620C0DCA7CA2 /* SpeechRecognizer.swift */; };
 		265D0B7AEB713522D3281186 /* VoiceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CCDEEFF3DADEBCC51030F10 /* VoiceView.swift */; };
+		280CF4E513FBFF8CEFAFB7D4 /* ContactDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E07C26511213892E131CDC83 /* ContactDetailView.swift */; };
 		36F954BA5AECB2CE70EAD6AB /* RealtimeAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD736E1729DABA033318794D /* RealtimeAPIClient.swift */; };
 		449FDE63FAD45B47FB34141E /* KeyboardObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93AEE3C5DF82B5247400C763 /* KeyboardObserver.swift */; };
 		4F7F7EBEFACCE6366F5CC214 /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = E740B278B8A2ECB42B6AEFE7 /* L10n.swift */; };
@@ -25,6 +26,7 @@
 		9CB97603F3E33B4B06D82F5C /* AudioStreamManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53EA97FB722407D2230B4B9C /* AudioStreamManager.swift */; };
 		AF2E3F7E65C7E864E2FFADE2 /* Person.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAC6BB8463FA287ED632AE1B /* Person.swift */; };
 		B2B3EA9ED52CA3BB433347F8 /* TaskManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E864E346ACAB89104F342E9F /* TaskManager.swift */; };
+		C5081ED43733677D0C575E93 /* TaskDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A6D3811B805D7695A475DE5 /* TaskDetailView.swift */; };
 		CDC44DD0190828061EA22FDA /* TimeTrackerVoiceApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8C3C8D017C28EC1FC41A04C /* TimeTrackerVoiceApp.swift */; };
 		D3CE25E03C1A76C43FE3D1EB /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D3FD0263B3A11FBBA221B23 /* AuthManager.swift */; };
 		DD870AD22053D46299184719 /* TasksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D2477154C54FC4FD6E11889 /* TasksView.swift */; };
@@ -51,6 +53,7 @@
 		53EA97FB722407D2230B4B9C /* AudioStreamManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioStreamManager.swift; sourceTree = "<group>"; };
 		75BE21884DDAC8E10F4EDFCB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		78439F0D6785C0874C264021 /* Task.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Task.swift; sourceTree = "<group>"; };
+		8A6D3811B805D7695A475DE5 /* TaskDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskDetailView.swift; sourceTree = "<group>"; };
 		8AB28059F207891C60A96719 /* ContactsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsView.swift; sourceTree = "<group>"; };
 		8CCDEEFF3DADEBCC51030F10 /* VoiceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceView.swift; sourceTree = "<group>"; };
 		8E971B5A76212F07EF0FCB5F /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
@@ -62,6 +65,7 @@
 		CC05BCE24353DA1B7E0F2DD0 /* Time.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Time.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D8C3C8D017C28EC1FC41A04C /* TimeTrackerVoiceApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeTrackerVoiceApp.swift; sourceTree = "<group>"; };
 		DEDCF222DC775249AD1DBDE6 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		E07C26511213892E131CDC83 /* ContactDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactDetailView.swift; sourceTree = "<group>"; };
 		E5EAE457C9906B6A456D2D48 /* VoiceState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceState.swift; sourceTree = "<group>"; };
 		E740B278B8A2ECB42B6AEFE7 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
 		E864E346ACAB89104F342E9F /* TaskManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskManager.swift; sourceTree = "<group>"; };
@@ -114,9 +118,11 @@
 			children = (
 				4B45E0C0F046463E901D90CF /* AuthView.swift */,
 				1CBBA4C145D6716BB9707F68 /* ChatView.swift */,
+				E07C26511213892E131CDC83 /* ContactDetailView.swift */,
 				8AB28059F207891C60A96719 /* ContactsView.swift */,
 				2293BE54AE90FD05E806AAB1 /* MainTabView.swift */,
 				A955FC5339920743150036A6 /* SettingsView.swift */,
+				8A6D3811B805D7695A475DE5 /* TaskDetailView.swift */,
 				0D2477154C54FC4FD6E11889 /* TasksView.swift */,
 				B9591C4C54EC4F7124AE2508 /* VoiceOrbView.swift */,
 				8CCDEEFF3DADEBCC51030F10 /* VoiceView.swift */,
@@ -256,6 +262,7 @@
 				96F45E29A73F59EEBF2115DE /* AuthView.swift in Sources */,
 				747020AB23CEDE8553123EA3 /* ChatView.swift in Sources */,
 				F282E300B5FF7CE32442566A /* Config.swift in Sources */,
+				280CF4E513FBFF8CEFAFB7D4 /* ContactDetailView.swift in Sources */,
 				055B6BC52A2591569642868F /* ContactsView.swift in Sources */,
 				E6F13AE35B81826443F360FE /* Event.swift in Sources */,
 				074830BC46C4B4C9BF728030 /* EventManager.swift in Sources */,
@@ -270,6 +277,7 @@
 				F0377CA10F15503727AE85FA /* SettingsView.swift in Sources */,
 				1E41C54FF5AB30F421AB9E3E /* SpeechRecognizer.swift in Sources */,
 				69D99FBFA5CADD16244BD637 /* Task.swift in Sources */,
+				C5081ED43733677D0C575E93 /* TaskDetailView.swift in Sources */,
 				B2B3EA9ED52CA3BB433347F8 /* TaskManager.swift in Sources */,
 				DD870AD22053D46299184719 /* TasksView.swift in Sources */,
 				CDC44DD0190828061EA22FDA /* TimeTrackerVoiceApp.swift in Sources */,

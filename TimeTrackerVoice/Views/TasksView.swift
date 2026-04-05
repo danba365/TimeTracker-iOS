@@ -8,7 +8,6 @@ struct TasksView: View {
     @ObservedObject private var networkMonitor = NetworkMonitor.shared
     @State private var selectedDate = Date()
     @State private var showingAddTask = false
-    @GestureState private var dragOffset: CGFloat = 0
     
     private let calendar = Calendar.current
     
@@ -59,60 +58,43 @@ struct TasksView: View {
     }
     
     var body: some View {
-        ZStack {
-            // Background
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color(hex: "1a1a2e"),
-                    Color(hex: "16213e"),
-                    Color(hex: "0f0f23")
-                ]),
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
-            
-            VStack(spacing: 0) {
-                // Header
-                headerView
+        NavigationStack {
+            ZStack {
+                // Background
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color(hex: "1a1a2e"),
+                        Color(hex: "16213e"),
+                        Color(hex: "0f0f23")
+                    ]),
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
                 
-                // Week selector (swipeable)
-                weekSelectorView
-                
-                // Tasks list with swipe gesture
-                if taskManager.isLoading {
-                    Spacer()
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                    Spacer()
-                } else {
-                    tasksListView
-                        .gesture(
-                            DragGesture()
-                                .updating($dragOffset) { value, state, _ in
-                                    state = value.translation.width
-                                }
-                                .onEnded { value in
-                                    let threshold: CGFloat = 50
-                                    if value.translation.width > threshold {
-                                        // Swipe right - go to previous day
-                                        withAnimation {
-                                            selectedDate = calendar.date(byAdding: .day, value: -1, to: selectedDate) ?? selectedDate
-                                        }
-                                    } else if value.translation.width < -threshold {
-                                        // Swipe left - go to next day
-                                        withAnimation {
-                                            selectedDate = calendar.date(byAdding: .day, value: 1, to: selectedDate) ?? selectedDate
-                                        }
-                                    }
-                                }
-                        )
+                VStack(spacing: 0) {
+                    // Header
+                    headerView
+                    
+                    // Week selector (swipeable)
+                    weekSelectorView
+                    
+                    // Tasks list with swipe gesture
+                    if taskManager.isLoading {
+                        Spacer()
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        Spacer()
+                    } else {
+                        tasksListView
+                    }
                 }
             }
-        }
-        .onAppear {
-            Task {
-                await taskManager.fetchTasks()
+            .navigationBarHidden(true)
+            .onAppear {
+                Task {
+                    await taskManager.fetchTasks()
+                }
             }
         }
     }
@@ -196,24 +178,40 @@ struct TasksView: View {
         .padding(.top, 16)
         .padding(.bottom, 12)
         .overlay(alignment: .topTrailing) {
-            // Today button
-            if !calendar.isDateInToday(selectedDate) {
-                Button(action: { 
-                    withAnimation {
-                        selectedDate = Date()
+            HStack(spacing: 8) {
+                // Refresh button
+                Button(action: {
+                    Task {
+                        await refreshData()
                     }
                 }) {
-                    Text(L10n.today)
-                        .font(.system(size: 12, weight: .semibold))
+                    Image(systemName: taskManager.isLoading ? "arrow.clockwise" : "arrow.clockwise")
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(Color(hex: "a78bfa"))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(Color(hex: "a78bfa").opacity(0.2))
-                        .cornerRadius(6)
+                        .rotationEffect(.degrees(taskManager.isLoading ? 360 : 0))
+                        .animation(taskManager.isLoading ? .linear(duration: 1).repeatForever(autoreverses: false) : .default, value: taskManager.isLoading)
                 }
-                .padding(.top, 12)
-                .padding(.trailing, 20)
+                .disabled(taskManager.isLoading)
+                
+                // Today button
+                if !calendar.isDateInToday(selectedDate) {
+                    Button(action: { 
+                        withAnimation {
+                            selectedDate = Date()
+                        }
+                    }) {
+                        Text(L10n.today)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(Color(hex: "a78bfa"))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Color(hex: "a78bfa").opacity(0.2))
+                            .cornerRadius(6)
+                    }
+                }
             }
+            .padding(.top, 12)
+            .padding(.trailing, 20)
         }
     }
     
@@ -320,17 +318,20 @@ struct TasksView: View {
             
             // 🔔 Reminders Section (first, different style)
             ForEach(reminders, id: \.id) { reminder in
-                ReminderRowView(reminder: reminder)
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
-                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) {
-                            deleteTask(reminder)
-                        } label: {
-                            Label(L10n.shared.delete, systemImage: "trash")
-                        }
+                NavigationLink(destination: TaskDetailView(task: reminder)) {
+                    ReminderRowView(reminder: reminder)
+                }
+                .buttonStyle(PlainButtonStyle())
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        deleteTask(reminder)
+                    } label: {
+                        Label(L10n.shared.delete, systemImage: "trash")
                     }
+                }
             }
             
             // 🎉 Events Section (anniversaries, etc.)
@@ -356,9 +357,10 @@ struct TasksView: View {
             } else {
                 // Regular tasks (after reminders, events, birthdays)
                 ForEach(tasks, id: \.id) { task in
-                    TaskRowView(task: task) {
-                        toggleTaskStatus(task)
+                    NavigationLink(destination: TaskDetailView(task: task)) {
+                        TaskRowView(task: task)
                     }
+                    .buttonStyle(PlainButtonStyle())
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
@@ -435,8 +437,7 @@ struct TasksView: View {
         formatter.dateFormat = "yyyy-MM-dd"
         let dateStr = formatter.string(from: date)
         
-        // Show ALL tasks for this date - no filtering
-        return taskManager.tasks.contains { $0.date == dateStr }
+        return taskManager.tasks.contains { $0.date == dateStr && $0.taskType != .idea }
     }
     
     private func getTasksForSelectedDate() -> [TaskItem] {
@@ -444,10 +445,8 @@ struct TasksView: View {
         formatter.dateFormat = "yyyy-MM-dd"
         let dateStr = formatter.string(from: selectedDate)
         
-        // Show ALL tasks for this date - no name-based filtering
-        // Both recurring parents and instances will be displayed
         return taskManager.tasks
-            .filter { $0.date == dateStr }
+            .filter { $0.date == dateStr && $0.taskType != .idea }
             .sorted { ($0.startTime ?? "") < ($1.startTime ?? "") }
     }
     
@@ -527,9 +526,18 @@ struct DayButton: View {
     }
     
     private var dayName: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEE"
-        return formatter.string(from: date).uppercased()
+        let isHebrew = L10n.shared.currentLanguage == .hebrew
+        let dayOfWeek = calendar.component(.weekday, from: date)
+        
+        if isHebrew {
+            // Hebrew single letters: א ב ג ד ה ו ש
+            let hebrewDays = ["", "א", "ב", "ג", "ד", "ה", "ו", "ש"]
+            return hebrewDays[dayOfWeek]
+        } else {
+            // English single letters: S M T W T F S
+            let englishDays = ["", "S", "M", "T", "W", "T", "F", "S"]
+            return englishDays[dayOfWeek]
+        }
     }
     
     private var dayNumber: String {
@@ -543,16 +551,13 @@ struct DayButton: View {
 
 struct TaskRowView: View {
     let task: TaskItem
-    let onToggle: () -> Void
     
     var body: some View {
         HStack(spacing: 12) {
-            // Status button
-            Button(action: onToggle) {
-                Image(systemName: task.status == .done ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 24))
-                    .foregroundColor(task.status == .done ? Color(hex: "10b981") : Color(hex: "475569"))
-            }
+            // Status indicator (visual only - use swipe to toggle)
+            Image(systemName: task.status == .done ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: 24))
+                .foregroundColor(task.status == .done ? Color(hex: "10b981") : Color(hex: "475569"))
             
             // Task info
             VStack(alignment: .leading, spacing: 4) {
