@@ -1,4 +1,5 @@
 import SwiftUI
+import Contacts
 
 /// Contacts view displaying all contacts organized by relationship type
 struct ContactsView: View {
@@ -6,6 +7,11 @@ struct ContactsView: View {
     @State private var searchText = ""
     @State private var selectedFilter: RelationshipType? = nil
     @State private var showingAddContact = false
+    @State private var showingContactPicker = false
+    @State private var pickedContacts: [CNContact] = []
+    @State private var showingImportReview = false
+    @State private var importingCount = 0
+    @State private var importResult: (success: Int, duplicates: Int)? = nil
     @FocusState private var isSearchFocused: Bool
     
     private var filteredPeople: [Person] {
@@ -83,7 +89,158 @@ struct ContactsView: View {
                 }
             }
             .navigationBarHidden(true)
+            .background(
+                ContactPicker(isPresented: $showingContactPicker) { contacts in
+                    pickedContacts = contacts
+                    if !contacts.isEmpty {
+                        showingImportReview = true
+                    }
+                }
+            )
+            .sheet(isPresented: $showingImportReview) {
+                ContactImportReviewView(
+                    contacts: pickedContacts,
+                    onImport: { pairs in
+                        showingImportReview = false
+                        Task { await importContacts(pairs) }
+                    },
+                    onCancel: { showingImportReview = false }
+                )
+            }
+            .overlay {
+                if importingCount > 0 {
+                    importingOverlay
+                }
+                if let result = importResult {
+                    importResultOverlay(result)
+                }
+            }
         }
+    }
+    
+    // MARK: - Import Logic
+    
+    private func importContacts(_ pairs: [(CNContact, RelationshipType)]) async {
+        importingCount = pairs.count
+        var success = 0
+        var duplicates = 0
+        
+        guard let userId = AuthManager.shared.currentUser?.id else {
+            importingCount = 0
+            return
+        }
+        
+        for (contact, type) in pairs {
+            let firstName = contact.givenName
+            let lastName = contact.familyName.isEmpty ? nil : contact.familyName
+            
+            let alreadyExists = peopleManager.people.contains { existing in
+                existing.firstName.lowercased() == firstName.lowercased() &&
+                (existing.lastName?.lowercased() ?? "") == (lastName?.lowercased() ?? "")
+            }
+            
+            if alreadyExists {
+                duplicates += 1
+                continue
+            }
+            
+            let phone = contact.phoneNumbers.first(where: {
+                let label = $0.label ?? ""
+                return label.contains("Main") || label.contains("Home")
+            })?.value.stringValue ?? contact.phoneNumbers.first?.value.stringValue
+            
+            let mobile = contact.phoneNumbers.first(where: {
+                let label = $0.label ?? ""
+                return label.contains("Mobile") || label.contains("iPhone")
+            })?.value.stringValue
+            
+            let email = contact.emailAddresses.first?.value as String?
+            
+            var birthdayStr: String? = nil
+            if let bday = contact.birthday, let date = Calendar.current.date(from: bday) {
+                let fmt = DateFormatter()
+                fmt.dateFormat = "yyyy-MM-dd"
+                birthdayStr = fmt.string(from: date)
+            }
+            
+            let nickname = contact.nickname.isEmpty ? nil : contact.nickname
+            
+            let input = CreatePersonInput(
+                firstName: firstName,
+                lastName: lastName,
+                nickname: nickname,
+                relationshipType: type,
+                phone: phone,
+                mobile: mobile,
+                email: email,
+                birthday: birthdayStr,
+                userId: userId
+            )
+            
+            do {
+                _ = try await peopleManager.createPerson(input)
+                success += 1
+            } catch {
+                print("❌ Failed to import \(firstName): \(error)")
+            }
+        }
+        
+        importingCount = 0
+        importResult = (success: success, duplicates: duplicates)
+        
+        try? await Task.sleep(nanoseconds: 3_000_000_000)
+        importResult = nil
+    }
+    
+    // MARK: - Import Overlays
+    
+    private var importingOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.6).ignoresSafeArea()
+            VStack(spacing: 16) {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: Color(hex: "a78bfa")))
+                    .scaleEffect(1.3)
+                Text(L10n.shared.currentLanguage == .hebrew
+                     ? "מייבא \(importingCount) אנשי קשר..."
+                     : "Importing \(importingCount) contacts...")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.white)
+            }
+            .padding(30)
+            .background(Color(hex: "1e293b"))
+            .cornerRadius(16)
+        }
+    }
+    
+    private func importResultOverlay(_ result: (success: Int, duplicates: Int)) -> some View {
+        let isHebrew = L10n.shared.currentLanguage == .hebrew
+        return ZStack {
+            Color.black.opacity(0.5).ignoresSafeArea()
+            VStack(spacing: 12) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 40))
+                    .foregroundColor(Color(hex: "10b981"))
+                
+                Text(isHebrew
+                     ? "יובאו \(result.success) אנשי קשר"
+                     : "\(result.success) contacts imported")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(.white)
+                
+                if result.duplicates > 0 {
+                    Text(isHebrew
+                         ? "\(result.duplicates) כבר קיימים (דולגו)"
+                         : "\(result.duplicates) already existed (skipped)")
+                        .font(.system(size: 14))
+                        .foregroundColor(Color(hex: "94a3b8"))
+                }
+            }
+            .padding(30)
+            .background(Color(hex: "1e293b"))
+            .cornerRadius(16)
+        }
+        .transition(.opacity)
     }
     
     // MARK: - Header
@@ -102,11 +259,18 @@ struct ContactsView: View {
             
             Spacer()
             
-            // Add contact button (placeholder for future)
-            Button(action: { showingAddContact = true }) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 28))
-                    .foregroundColor(Color(hex: "a78bfa"))
+            HStack(spacing: 12) {
+                Button(action: { showingContactPicker = true }) {
+                    Image(systemName: "square.and.arrow.down.on.square")
+                        .font(.system(size: 22))
+                        .foregroundColor(Color(hex: "a78bfa"))
+                }
+                
+                Button(action: { showingAddContact = true }) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 28))
+                        .foregroundColor(Color(hex: "a78bfa"))
+                }
             }
         }
         .padding(.horizontal, 20)
