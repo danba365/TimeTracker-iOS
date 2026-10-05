@@ -7,11 +7,12 @@ struct MainTabView: View {
     @EnvironmentObject var peopleManager: PeopleManager
     @EnvironmentObject var eventManager: EventManager
     @ObservedObject private var l10n = L10n.shared
-    
+    @ObservedObject private var vacationManager = VacationManager.shared
+
     @State private var selectedTab: Tab = .tasks
     
     enum Tab {
-        case tasks, chat, voice, contacts
+        case tasks, chat, voice, contacts, lists
     }
     
     var body: some View {
@@ -27,24 +28,72 @@ struct MainTabView: View {
                     VoiceView()
                 case .contacts:
                     ContactsView()
+                case .lists:
+                    ListsView()
                 }
             }
             .environmentObject(authManager)
             .environmentObject(taskManager)
             .environmentObject(peopleManager)
             .environmentObject(eventManager)
-            
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if let vacation = vacationManager.vacation() {
+                    VacationTodayBanner(vacation: vacation)
+                }
+            }
+
             // Tab Bar
             CustomTabBar(selectedTab: $selectedTab)
         }
         .ignoresSafeArea(.keyboard)
         .environment(\.layoutDirection, l10n.currentLanguage.isRTL ? .rightToLeft : .leftToRight)
         .onAppear {
-            // Fetch events on app launch
+            // Fetch events + vacations on app launch
             Task {
                 await eventManager.fetchEvents()
+                await vacationManager.fetchVacations()
             }
         }
+    }
+}
+
+// MARK: - Vacation Banner
+
+/// Shown at the top of the app when today falls inside a vacation.
+struct VacationTodayBanner: View {
+    let vacation: VacationItem
+    @ObservedObject private var l10n = L10n.shared
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text("🏖️")
+                .font(.system(size: 20))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(l10n.currentLanguage == .hebrew ? "אתה בחופשה היום" : "You're on vacation today")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white)
+                if let label = vacation.label, !label.isEmpty {
+                    Text(label)
+                        .font(.system(size: 13))
+                        .foregroundColor(.white.opacity(0.85))
+                }
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity)
+        .background(
+            LinearGradient(
+                colors: [
+                    Color(red: 0.05, green: 0.65, blue: 0.91),
+                    Color(red: 0.01, green: 0.52, blue: 0.78),
+                ],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        )
+        .environment(\.layoutDirection, l10n.currentLanguage.isRTL ? .rightToLeft : .leftToRight)
     }
 }
 
@@ -86,13 +135,26 @@ struct CustomTabBar: View {
             ) {
                 selectedTab = .contacts
             }
+            
+            TabBarButton(
+                icon: "tray.full",
+                label: L10n.tabLists,
+                isSelected: selectedTab == .lists
+            ) {
+                selectedTab = .lists
+            }
         }
         .padding(.top, 12)
         .padding(.bottom, 28)
         .background(
             Rectangle()
-                .fill(Color(hex: "0f0f23"))
-                .shadow(color: .black.opacity(0.3), radius: 10, y: -5)
+                .fill(SorbetTheme.Palette.surface)
+                .overlay(alignment: .top) {
+                    Rectangle()
+                        .fill(SorbetTheme.Palette.border)
+                        .frame(height: 1)
+                }
+                .shadow(color: SorbetTheme.Shadow.lifted.color, radius: 16, y: -4)
         )
     }
 }
@@ -122,11 +184,11 @@ struct TabBarButton: View {
             VStack(spacing: 4) {
                 Image(systemName: iconName)
                     .font(.system(size: 22))
-                    .foregroundColor(isSelected ? Color(hex: "a78bfa") : Color(hex: "64748b"))
-                
+                    .foregroundColor(isSelected ? SorbetTheme.ViewTint.people.accent : SorbetTheme.Palette.textTertiary)
+
                 Text(label)
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(isSelected ? Color(hex: "a78bfa") : Color(hex: "64748b"))
+                    .foregroundColor(isSelected ? SorbetTheme.ViewTint.people.accent : SorbetTheme.Palette.textTertiary)
             }
             .frame(maxWidth: .infinity)
         }

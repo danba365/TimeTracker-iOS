@@ -9,17 +9,9 @@ struct ContactDetailView: View {
     
     var body: some View {
         ZStack {
-            // Background
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color(hex: "1a1a2e"),
-                    Color(hex: "16213e"),
-                    Color(hex: "0f0f23")
-                ]),
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            // Background — Sorbet "people" lavender tint
+            SorbetTheme.ViewTint.people.background
+                .ignoresSafeArea()
             
             ScrollView {
                 VStack(spacing: 24) {
@@ -45,7 +37,7 @@ struct ContactDetailView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(Color(hex: "1a1a2e"), for: .navigationBar)
+        .toolbarBackground(SorbetTheme.ViewTint.people.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
     }
     
@@ -68,12 +60,12 @@ struct ContactDetailView: View {
             VStack(spacing: 4) {
                 Text(person.fullName)
                     .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.white)
+                    .foregroundColor(SorbetTheme.Palette.textPrimary)
                 
                 if let nickname = person.nickname, !nickname.isEmpty {
                     Text("\"\(nickname)\"")
                         .font(.system(size: 16))
-                        .foregroundColor(Color(hex: "94a3b8"))
+                        .foregroundColor(SorbetTheme.Palette.textSecondary)
                 }
                 
                 // Relationship badge
@@ -143,7 +135,7 @@ struct ContactDetailView: View {
             )
             
             Divider()
-                .background(Color.white.opacity(0.1))
+                .background(SorbetTheme.Palette.border)
             
             // Email - always show
             ContactDetailRow(
@@ -154,7 +146,7 @@ struct ContactDetailView: View {
             )
             
             Divider()
-                .background(Color.white.opacity(0.1))
+                .background(SorbetTheme.Palette.border)
             
             // Phone (optional)
             if let phone = person.phone, !phone.isEmpty {
@@ -166,7 +158,7 @@ struct ContactDetailView: View {
                 )
                 
                 Divider()
-                    .background(Color.white.opacity(0.1))
+                    .background(SorbetTheme.Palette.border)
             }
             
             // Birthday
@@ -180,7 +172,7 @@ struct ContactDetailView: View {
                 
                 if person.anniversary != nil {
                     Divider()
-                        .background(Color.white.opacity(0.1))
+                        .background(SorbetTheme.Palette.border)
                 }
             }
             
@@ -194,8 +186,12 @@ struct ContactDetailView: View {
                 )
             }
         }
-        .background(Color.white.opacity(0.05))
+        .background(SorbetTheme.Palette.surface)
         .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(SorbetTheme.Palette.border, lineWidth: 1)
+        )
     }
     
     // MARK: - Notes Section
@@ -207,18 +203,22 @@ struct ContactDetailView: View {
                     .foregroundColor(Color(hex: "fbbf24"))
                 Text(isHebrew ? "הערות" : "Notes")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(Color(hex: "94a3b8"))
+                    .foregroundColor(SorbetTheme.Palette.textSecondary)
             }
             
             Text(notes)
                 .font(.system(size: 15))
-                .foregroundColor(.white)
+                .foregroundColor(SorbetTheme.Palette.textPrimary)
                 .frame(maxWidth: .infinity, alignment: isHebrew ? .trailing : .leading)
                 .multilineTextAlignment(isHebrew ? .trailing : .leading)
         }
         .padding(16)
-        .background(Color.white.opacity(0.05))
+        .background(SorbetTheme.Palette.surface)
         .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(SorbetTheme.Palette.border, lineWidth: 1)
+        )
     }
     
     // MARK: - Helpers
@@ -234,7 +234,7 @@ struct ContactDetailView: View {
         case .family: return Color(hex: "f472b6")
         case .friend: return Color(hex: "60a5fa")
         case .colleague: return Color(hex: "fbbf24")
-        case .other: return Color(hex: "a78bfa")
+        case .other: return SorbetTheme.ViewTint.people.accent
         }
     }
     
@@ -328,7 +328,7 @@ struct ContactActionButton: View {
                 
                 Text(label)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(Color(hex: "94a3b8"))
+                    .foregroundColor(SorbetTheme.Palette.textSecondary)
             }
         }
     }
@@ -352,11 +352,11 @@ struct ContactDetailRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
                     .font(.system(size: 12))
-                    .foregroundColor(Color(hex: "64748b"))
+                    .foregroundColor(SorbetTheme.Palette.textTertiary)
                 
                 Text(value)
                     .font(.system(size: 15))
-                    .foregroundColor(.white)
+                    .foregroundColor(SorbetTheme.Palette.textPrimary)
             }
             
             Spacer()

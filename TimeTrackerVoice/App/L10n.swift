@@ -49,6 +49,7 @@ final class L10n: ObservableObject {
     var tabChat: String { isHebrew ? "צ'אט" : "Chat" }
     var tabVoice: String { isHebrew ? "קול" : "Voice" }
     var tabContacts: String { isHebrew ? "אנשי קשר" : "Contacts" }
+    var tabLists: String { isHebrew ? "רשימות" : "Lists" }
     var contacts: String { isHebrew ? "אנשי קשר" : "Contacts" }
     
     // MARK: - Common
@@ -138,6 +139,7 @@ extension L10n {
     static var tabChat: String { shared.tabChat }
     static var tabVoice: String { shared.tabVoice }
     static var tabContacts: String { shared.tabContacts }
+    static var tabLists: String { shared.tabLists }
     static var contacts: String { shared.contacts }
     
     // Common

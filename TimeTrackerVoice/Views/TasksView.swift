@@ -60,18 +60,10 @@ struct TasksView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Background
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(hex: "1a1a2e"),
-                        Color(hex: "16213e"),
-                        Color(hex: "0f0f23")
-                    ]),
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
-                
+                // Background — Sorbet "tasks" mint tint
+                SorbetTheme.ViewTint.tasks.background
+                    .ignoresSafeArea()
+
                 VStack(spacing: 0) {
                     // Header
                     headerView
@@ -83,7 +75,7 @@ struct TasksView: View {
                     if taskManager.isLoading {
                         Spacer()
                         ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .progressViewStyle(CircularProgressViewStyle(tint: SorbetTheme.ViewTint.tasks.accent))
                         Spacer()
                     } else {
                         tasksListView
@@ -139,30 +131,28 @@ struct TasksView: View {
                 }) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(Color(hex: "a78bfa"))
+                        .foregroundColor(SorbetTheme.ViewTint.tasks.accent)
                 }
-                
+
                 Spacer()
-                
+
                 VStack(alignment: .center, spacing: 4) {
                     Text(formattedDayName)
                         .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(SorbetTheme.Palette.textPrimary)
                     Text(formattedFullDate)
                         .font(.system(size: 14))
-                        .foregroundColor(Color(hex: "94a3b8"))
-                    
-                    // Last sync indicator
+                        .foregroundColor(SorbetTheme.Palette.textSecondary)
+
                     if let lastSync = taskManager.lastSyncDate {
                         Text("\(L10n.updated): \(formatLastSync(lastSync))")
                             .font(.system(size: 10))
-                            .foregroundColor(Color(hex: "64748b"))
+                            .foregroundColor(SorbetTheme.Palette.textTertiary)
                     }
                 }
-                
+
                 Spacer()
-                
-                // Next day button
+
                 Button(action: {
                     withAnimation {
                         selectedDate = calendar.date(byAdding: .day, value: 1, to: selectedDate) ?? selectedDate
@@ -170,7 +160,7 @@ struct TasksView: View {
                 }) {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(Color(hex: "a78bfa"))
+                        .foregroundColor(SorbetTheme.ViewTint.tasks.accent)
                 }
             }
         }
@@ -187,26 +177,25 @@ struct TasksView: View {
                 }) {
                     Image(systemName: taskManager.isLoading ? "arrow.clockwise" : "arrow.clockwise")
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(Color(hex: "a78bfa"))
+                        .foregroundColor(SorbetTheme.ViewTint.tasks.accent)
                         .rotationEffect(.degrees(taskManager.isLoading ? 360 : 0))
                         .animation(taskManager.isLoading ? .linear(duration: 1).repeatForever(autoreverses: false) : .default, value: taskManager.isLoading)
                 }
                 .disabled(taskManager.isLoading)
-                
-                // Today button
+
                 if !calendar.isDateInToday(selectedDate) {
-                    Button(action: { 
+                    Button(action: {
                         withAnimation {
                             selectedDate = Date()
                         }
                     }) {
                         Text(L10n.today)
                             .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(Color(hex: "a78bfa"))
+                            .foregroundColor(.white)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 5)
-                            .background(Color(hex: "a78bfa").opacity(0.2))
-                            .cornerRadius(6)
+                            .background(SorbetTheme.ViewTint.tasks.accent)
+                            .cornerRadius(SorbetTheme.Radius.sm)
                     }
                 }
             }
@@ -306,10 +295,10 @@ struct TasksView: View {
             if taskManager.isLoading {
                 HStack(spacing: 8) {
                     ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: Color(hex: "a78bfa")))
+                        .progressViewStyle(CircularProgressViewStyle(tint: SorbetTheme.ViewTint.tasks.accent))
                     Text(L10n.refreshing)
                         .font(.system(size: 14))
-                        .foregroundColor(Color(hex: "94a3b8"))
+                        .foregroundColor(SorbetTheme.Palette.textSecondary)
                 }
                 .padding(.vertical, 8)
                 .listRowBackground(Color.clear)
@@ -405,15 +394,15 @@ struct TasksView: View {
         VStack(spacing: 16) {
             Image(systemName: "checkmark.circle")
                 .font(.system(size: 50))
-                .foregroundColor(Color(hex: "475569"))
-            
+                .foregroundColor(SorbetTheme.Palette.textTertiary)
+
             Text(L10n.noTasksTitle)
                 .font(.system(size: 18, weight: .medium))
-                .foregroundColor(Color(hex: "64748b"))
-            
+                .foregroundColor(SorbetTheme.Palette.textSecondary)
+
             Text(L10n.noTasksSubtitle)
                 .font(.system(size: 14))
-                .foregroundColor(Color(hex: "475569"))
+                .foregroundColor(SorbetTheme.Palette.textTertiary)
         }
         .padding(.top, 60)
     }
@@ -437,7 +426,7 @@ struct TasksView: View {
         formatter.dateFormat = "yyyy-MM-dd"
         let dateStr = formatter.string(from: date)
         
-        return taskManager.tasks.contains { $0.date == dateStr && $0.taskType != .idea }
+        return taskManager.tasks.contains { $0.date == dateStr && $0.taskType != .idea && $0.taskType != .social }
     }
     
     private func getTasksForSelectedDate() -> [TaskItem] {
@@ -446,7 +435,7 @@ struct TasksView: View {
         let dateStr = formatter.string(from: selectedDate)
         
         return taskManager.tasks
-            .filter { $0.date == dateStr && $0.taskType != .idea }
+            .filter { $0.date == dateStr && $0.taskType != .idea && $0.taskType != .social }
             .sorted { ($0.startTime ?? "") < ($1.startTime ?? "") }
     }
     
@@ -476,12 +465,12 @@ struct DayButton: View {
             VStack(spacing: 4) {
                 Text(dayName)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(isSelected ? .white : Color(hex: "64748b"))
-                
+                    .foregroundColor(isSelected ? .white : SorbetTheme.Palette.textSecondary)
+
                 ZStack {
                     Text(dayNumber)
                         .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(isSelected ? .white : Color(hex: "94a3b8"))
+                        .foregroundColor(isSelected ? .white : SorbetTheme.Palette.textPrimary)
                     
                     // Birthday indicator (cake emoji on top-right)
                     if hasBirthday {
@@ -519,8 +508,13 @@ struct DayButton: View {
             }
             .frame(width: 44, height: 70)
             .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(isSelected ? Color(hex: "7c3aed") : Color.white.opacity(0.05))
+                RoundedRectangle(cornerRadius: SorbetTheme.Radius.md)
+                    .fill(isSelected ? SorbetTheme.ViewTint.tasks.accent : SorbetTheme.Palette.surface)
+                    .shadow(
+                        color: SorbetTheme.Shadow.card.color,
+                        radius: SorbetTheme.Shadow.card.radius / 2,
+                        x: 0, y: 2
+                    )
             )
         }
     }
@@ -554,64 +548,59 @@ struct TaskRowView: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            // Status indicator (visual only - use swipe to toggle)
             Image(systemName: task.status == .done ? "checkmark.circle.fill" : "circle")
                 .font(.system(size: 24))
-                .foregroundColor(task.status == .done ? Color(hex: "10b981") : Color(hex: "475569"))
-            
-            // Task info
+                .foregroundColor(task.status == .done ? SorbetTheme.Palette.statusDone : SorbetTheme.Palette.textTertiary)
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(task.title)
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(task.status == .done ? Color(hex: "64748b") : .white)
+                    .foregroundColor(task.status == .done ? SorbetTheme.Palette.textTertiary : SorbetTheme.Palette.textPrimary)
                     .strikethrough(task.status == .done)
-                
+
                 HStack(spacing: 8) {
                     if let startTime = task.startTime {
                         HStack(spacing: 4) {
                             Image(systemName: "clock")
                                 .font(.system(size: 12))
-                            // Format time to show only HH:MM (remove seconds)
                             Text(formatTimeWithoutSeconds(startTime))
                                 .font(.system(size: 12))
                         }
-                        .foregroundColor(Color(hex: "64748b"))
+                        .foregroundColor(SorbetTheme.Palette.textSecondary)
                     }
-                    
-                    // Recurring indicator
+
                     if task.isRecurring || task.parentTaskId != nil {
                         Image(systemName: "repeat")
                             .font(.system(size: 10))
-                            .foregroundColor(Color(hex: "8b5cf6"))
+                            .foregroundColor(SorbetTheme.ViewTint.people.accent)
                     }
-                    
+
                     priorityBadge
                 }
             }
-            
+
             Spacer()
         }
         .padding(16)
-        .background(Color.white.opacity(0.05))
-        .cornerRadius(12)
+        .sorbetCard(radius: SorbetTheme.Radius.lg)
     }
-    
+
     private var priorityBadge: some View {
         let color: Color = {
             switch task.priority {
-            case .high: return Color(hex: "ef4444")
-            case .medium: return Color(hex: "f59e0b")
-            case .low: return Color(hex: "10b981")
+            case .high: return SorbetTheme.Palette.priorityHigh
+            case .medium: return SorbetTheme.Palette.priorityMedium
+            case .low: return SorbetTheme.Palette.priorityLow
             }
         }()
-        
+
         return Text(task.priority.rawValue.capitalized)
             .font(.system(size: 10, weight: .semibold))
             .foregroundColor(color)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
-            .background(color.opacity(0.2))
-            .cornerRadius(4)
+            .background(color.opacity(0.16))
+            .cornerRadius(SorbetTheme.Radius.sm)
     }
     
     // MARK: - Helpers
@@ -633,23 +622,21 @@ struct ReminderRowView: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            // Bell icon (same position as status button in TaskRowView)
             ZStack {
                 Circle()
-                    .fill(Color(hex: "1a3a4a"))
+                    .fill(SorbetTheme.ViewTint.coach.accent.opacity(0.16))
                     .frame(width: 44, height: 44)
-                
+
                 Image(systemName: "bell.fill")
                     .font(.system(size: 20))
-                    .foregroundColor(Color(hex: "06b6d4"))
+                    .foregroundColor(SorbetTheme.ViewTint.coach.accent)
             }
-            
-            // Reminder info (same alignment as TaskRowView)
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(reminder.title)
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.white)
-                
+                    .foregroundColor(SorbetTheme.Palette.textPrimary)
+
                 HStack(spacing: 8) {
                     if let startTime = reminder.startTime {
                         HStack(spacing: 4) {
@@ -658,25 +645,23 @@ struct ReminderRowView: View {
                             Text(formatTimeWithoutSeconds(startTime))
                                 .font(.system(size: 12))
                         }
-                        .foregroundColor(Color(hex: "06b6d4"))
+                        .foregroundColor(SorbetTheme.ViewTint.coach.accent)
                     }
-                    
-                    // "תזכורת" badge
+
                     Text(L10n.reminder)
                         .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(Color(hex: "06b6d4"))
+                        .foregroundColor(SorbetTheme.ViewTint.coach.accent)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(Color(hex: "06b6d4").opacity(0.2))
-                        .cornerRadius(4)
+                        .background(SorbetTheme.ViewTint.coach.accent.opacity(0.16))
+                        .cornerRadius(SorbetTheme.Radius.sm)
                 }
             }
-            
+
             Spacer()
         }
         .padding(16)
-        .background(Color(hex: "1a2634"))
-        .cornerRadius(12)
+        .sorbetCard(radius: SorbetTheme.Radius.lg)
     }
     
     /// Formats time string from "HH:MM:SS" to "HH:MM"
@@ -710,7 +695,7 @@ struct BirthdayRowView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(birthdayTitle)
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
+                    .foregroundColor(SorbetTheme.Palette.textPrimary)
                 
                 HStack(spacing: 8) {
                     if let relationship = person.relationshipDetail ?? relationshipTypeLabel {
@@ -722,7 +707,7 @@ struct BirthdayRowView: View {
                     if let age = person.age {
                         Text(L10n.shared.currentLanguage == .hebrew ? "מלאו \(age + 1)" : "Turning \(age + 1)")
                             .font(.system(size: 12))
-                            .foregroundColor(Color(hex: "94a3b8"))
+                            .foregroundColor(SorbetTheme.Palette.textSecondary)
                     }
                 }
             }
@@ -789,7 +774,7 @@ struct EventRowView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(event.name)
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
+                    .foregroundColor(SorbetTheme.Palette.textPrimary)
                 
                 HStack(spacing: 8) {
                     Text(event.eventType.displayName)
@@ -799,7 +784,7 @@ struct EventRowView: View {
                     if let years = event.yearsSince, years > 0 {
                         Text(L10n.shared.currentLanguage == .hebrew ? "\(years) שנים" : "\(years) years")
                             .font(.system(size: 12))
-                            .foregroundColor(Color(hex: "94a3b8"))
+                            .foregroundColor(SorbetTheme.Palette.textSecondary)
                     }
                 }
             }

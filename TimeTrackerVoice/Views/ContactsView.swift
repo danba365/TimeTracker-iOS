@@ -44,20 +44,12 @@ struct ContactsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Background
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(hex: "1a1a2e"),
-                        Color(hex: "16213e"),
-                        Color(hex: "0f0f23")
-                    ]),
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
-                .onTapGesture {
-                    isSearchFocused = false
-                }
+                // Background — Sorbet "people" lavender tint
+                SorbetTheme.ViewTint.people.background
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        isSearchFocused = false
+                    }
                 
                 VStack(spacing: 0) {
                     // Header
@@ -73,7 +65,7 @@ struct ContactsView: View {
                     if peopleManager.isLoading {
                         Spacer()
                         ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .progressViewStyle(CircularProgressViewStyle(tint: SorbetTheme.ViewTint.people.accent))
                         Spacer()
                     } else {
                         contactsListView
@@ -199,16 +191,16 @@ struct ContactsView: View {
             Color.black.opacity(0.6).ignoresSafeArea()
             VStack(spacing: 16) {
                 ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: Color(hex: "a78bfa")))
+                    .progressViewStyle(CircularProgressViewStyle(tint: SorbetTheme.ViewTint.people.accent))
                     .scaleEffect(1.3)
                 Text(L10n.shared.currentLanguage == .hebrew
                      ? "מייבא \(importingCount) אנשי קשר..."
                      : "Importing \(importingCount) contacts...")
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.white)
+                    .foregroundColor(SorbetTheme.Palette.textPrimary)
             }
             .padding(30)
-            .background(Color(hex: "1e293b"))
+            .background(SorbetTheme.Palette.surface)
             .cornerRadius(16)
         }
     }
@@ -226,18 +218,18 @@ struct ContactsView: View {
                      ? "יובאו \(result.success) אנשי קשר"
                      : "\(result.success) contacts imported")
                     .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(.white)
+                    .foregroundColor(SorbetTheme.Palette.textPrimary)
                 
                 if result.duplicates > 0 {
                     Text(isHebrew
                          ? "\(result.duplicates) כבר קיימים (דולגו)"
                          : "\(result.duplicates) already existed (skipped)")
                         .font(.system(size: 14))
-                        .foregroundColor(Color(hex: "94a3b8"))
+                        .foregroundColor(SorbetTheme.Palette.textSecondary)
                 }
             }
             .padding(30)
-            .background(Color(hex: "1e293b"))
+            .background(SorbetTheme.Palette.surface)
             .cornerRadius(16)
         }
         .transition(.opacity)
@@ -250,11 +242,11 @@ struct ContactsView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(L10n.contacts)
                     .font(.system(size: 28, weight: .bold))
-                    .foregroundColor(.white)
+                    .foregroundColor(SorbetTheme.Palette.textPrimary)
                 
                 Text(contactsCountText)
                     .font(.system(size: 14))
-                    .foregroundColor(Color(hex: "94a3b8"))
+                    .foregroundColor(SorbetTheme.Palette.textSecondary)
             }
             
             Spacer()
@@ -263,13 +255,13 @@ struct ContactsView: View {
                 Button(action: { showingContactPicker = true }) {
                     Image(systemName: "square.and.arrow.down.on.square")
                         .font(.system(size: 22))
-                        .foregroundColor(Color(hex: "a78bfa"))
+                        .foregroundColor(SorbetTheme.ViewTint.people.accent)
                 }
                 
                 Button(action: { showingAddContact = true }) {
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: 28))
-                        .foregroundColor(Color(hex: "a78bfa"))
+                        .foregroundColor(SorbetTheme.ViewTint.people.accent)
                 }
             }
         }
@@ -343,14 +335,14 @@ struct ContactsView: View {
     private var searchBarView: some View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
-                .foregroundColor(Color(hex: "64748b"))
+                .foregroundColor(SorbetTheme.Palette.textTertiary)
             
             TextField(
                 L10n.shared.currentLanguage == .hebrew ? "חיפוש אנשי קשר..." : "Search contacts...",
                 text: $searchText
             )
             .textFieldStyle(.plain)
-            .foregroundColor(.white)
+            .foregroundColor(SorbetTheme.Palette.textPrimary)
             .focused($isSearchFocused)
             .submitLabel(.search)
             .onSubmit {
@@ -363,17 +355,21 @@ struct ContactsView: View {
                     isSearchFocused = false
                 }) {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(Color(hex: "64748b"))
+                        .foregroundColor(SorbetTheme.Palette.textTertiary)
                 }
             }
         }
         .padding(12)
-        .background(Color.white.opacity(0.05))
+        .background(SorbetTheme.Palette.surface)
         .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(SorbetTheme.Palette.border, lineWidth: 1)
+        )
         .padding(.horizontal, 20)
         .padding(.bottom, 12)
     }
-    
+
     // MARK: - Contacts List
     
     private var contactsListView: some View {
@@ -417,7 +413,7 @@ struct ContactsView: View {
                     .font(.system(size: 18))
                 Text(L10n.shared.currentLanguage == .hebrew ? "ימי הולדת קרובים" : "Upcoming Birthdays")
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
+                    .foregroundColor(SorbetTheme.Palette.textPrimary)
             }
             .padding(.top, 8)
             
@@ -435,16 +431,16 @@ struct ContactsView: View {
         VStack(spacing: 16) {
             Image(systemName: "person.crop.circle.badge.questionmark")
                 .font(.system(size: 50))
-                .foregroundColor(Color(hex: "475569"))
+                .foregroundColor(SorbetTheme.Palette.textTertiary)
             
             Text(L10n.shared.currentLanguage == .hebrew ? "לא נמצאו אנשי קשר" : "No contacts found")
                 .font(.system(size: 18, weight: .medium))
-                .foregroundColor(Color(hex: "64748b"))
+                .foregroundColor(SorbetTheme.Palette.textTertiary)
             
             if !searchText.isEmpty {
                 Text(L10n.shared.currentLanguage == .hebrew ? "נסה לחפש משהו אחר" : "Try a different search")
                     .font(.system(size: 14))
-                    .foregroundColor(Color(hex: "475569"))
+                    .foregroundColor(SorbetTheme.Palette.textTertiary)
             }
         }
         .padding(.top, 60)
@@ -471,9 +467,13 @@ struct FilterChip: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
-            .background(isSelected ? Color(hex: "a78bfa") : Color.white.opacity(0.08))
-            .foregroundColor(isSelected ? .white : Color(hex: "94a3b8"))
+            .background(isSelected ? SorbetTheme.ViewTint.people.accent : SorbetTheme.Palette.surface)
+            .foregroundColor(isSelected ? .white : SorbetTheme.Palette.textSecondary)
             .cornerRadius(20)
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(isSelected ? Color.clear : SorbetTheme.Palette.border, lineWidth: 1)
+            )
         }
     }
 }
@@ -500,7 +500,7 @@ struct ContactRowView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(person.fullName)
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.white)
+                    .foregroundColor(SorbetTheme.Palette.textPrimary)
                 
                 HStack(spacing: 8) {
                     // Relationship
@@ -539,10 +539,9 @@ struct ContactRowView: View {
             }
         }
         .padding(14)
-        .background(Color.white.opacity(0.05))
-        .cornerRadius(12)
+        .sorbetCard(radius: 12)
     }
-    
+
     private var initials: String {
         let first = person.firstName.prefix(1).uppercased()
         let last = (person.lastName?.prefix(1).uppercased()) ?? ""
@@ -558,7 +557,7 @@ struct ContactRowView: View {
         case .colleague:
             return Color(hex: "fbbf24") // Yellow
         case .other:
-            return Color(hex: "a78bfa") // Purple
+            return SorbetTheme.ViewTint.people.accent // Purple
         }
     }
     
@@ -598,7 +597,7 @@ struct UpcomingBirthdayRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(person.fullName)
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.white)
+                    .foregroundColor(SorbetTheme.Palette.textPrimary)
                 
                 if let days = person.daysUntilBirthday {
                     Text(daysText(days))
@@ -612,7 +611,7 @@ struct UpcomingBirthdayRow: View {
             if let age = person.age {
                 Text(L10n.shared.currentLanguage == .hebrew ? "ימלאו \(age + 1)" : "Turning \(age + 1)")
                     .font(.system(size: 12))
-                    .foregroundColor(Color(hex: "94a3b8"))
+                    .foregroundColor(SorbetTheme.Palette.textSecondary)
             }
         }
         .padding(12)

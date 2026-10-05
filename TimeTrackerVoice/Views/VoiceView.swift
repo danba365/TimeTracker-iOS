@@ -177,7 +177,8 @@ struct VoiceView: View {
             realtimeClient.stopConversation()
             isConversationActive = false
         } else {
-            if Config.openAIAPIKey.isEmpty {
+            // With ephemeral tokens configured, no on-device key is needed.
+            if !Config.usesEphemeralRealtimeToken && Config.openAIAPIKey.isEmpty {
                 showingAPIKeyAlert = true
                 return
             }
@@ -185,9 +186,10 @@ struct VoiceView: View {
             isConversationActive = true
         }
     }
-    
+
     private func checkAPIKey() {
-        if Config.openAIAPIKey.isEmpty {
+        // Only prompt for a key in legacy (non-ephemeral) mode.
+        if !Config.usesEphemeralRealtimeToken && Config.openAIAPIKey.isEmpty {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                 showingAPIKeyAlert = true
             }
