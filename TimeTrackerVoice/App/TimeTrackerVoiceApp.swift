@@ -26,7 +26,7 @@ struct TimeTrackerVoiceApp: App {
     
     init() {
         // Configure Google Sign-In on app launch
-        GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: Config.googleClientID)
+        GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: Config.googleClientID, serverClientID: Config.googleServerClientID)
     }
 }
 

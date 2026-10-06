@@ -22,7 +22,7 @@ class AuthManager: ObservableObject {
     // MARK: - Google Sign-In Configuration
     
     private func configureGoogleSignIn() {
-        let config = GIDConfiguration(clientID: Config.googleClientID)
+        let config = GIDConfiguration(clientID: Config.googleClientID, serverClientID: Config.googleServerClientID)
         GIDSignIn.sharedInstance.configuration = config
     }
     
@@ -83,7 +83,11 @@ class AuthManager: ObservableObject {
         }
         
         // Perform Google Sign-In
-        let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: rootViewController)
+        let result = try await GIDSignIn.sharedInstance.signIn(
+            withPresenting: rootViewController,
+            hint: nil,
+            additionalScopes: Config.isGoogleCalendarEnabled ? [Config.googleCalendarScope] : nil
+        )
         
         guard let idToken = result.user.idToken?.tokenString else {
             throw AuthError.serverError("Failed to get ID token from Google")
@@ -93,6 +97,34 @@ class AuthManager: ObservableObject {
         try await exchangeGoogleTokenWithSupabase(idToken: idToken)
         
         print("✅ Signed in with Google: \(result.user.profile?.email ?? "unknown")")
+
+        // Hand the one-time code to our backend so it can read the calendar.
+        // Never fails sign-in: the user can connect later from Settings.
+        if Config.isGoogleCalendarEnabled, let code = result.serverAuthCode {
+            Task { await CalendarEventManager.shared.connect(serverAuthCode: code) }
+        }
+    }
+
+    /// Ask Google for calendar access without changing the app's Supabase session.
+    /// Used from Settings and the "Reconnect" hint.
+    func connectGoogleCalendar() async -> Bool {
+        guard Config.isGoogleCalendarEnabled else { return false }
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let rootViewController = windowScene.windows.first?.rootViewController else {
+            return false
+        }
+        do {
+            let result = try await GIDSignIn.sharedInstance.signIn(
+                withPresenting: rootViewController,
+                hint: currentUser?.email,
+                additionalScopes: [Config.googleCalendarScope]
+            )
+            guard let code = result.serverAuthCode else { return false }
+            return await CalendarEventManager.shared.connect(serverAuthCode: code)
+        } catch {
+            print("⚠️ Google Calendar connect cancelled or failed: \(error)")
+            return false
+        }
     }
     
     private func exchangeGoogleTokenWithSupabase(idToken: String) async throws {
