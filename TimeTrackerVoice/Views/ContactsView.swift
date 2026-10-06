@@ -1,9 +1,94 @@
 import SwiftUI
 import Contacts
 
-/// Contacts view displaying all contacts organized by relationship type
+// MARK: - Contact Style
+// Relationship colours from design 5a/5b: pink family, blue friends,
+// orange work, violet other. Each has a light and dark variant.
+
+enum ContactStyle {
+    static func avatarForeground(_ type: RelationshipType) -> Color {
+        switch type {
+        case .family: return Color(light: 0xD70040, dark: 0xFF6482)
+        case .friend: return Color(light: 0x0062CC, dark: 0x64B5FF)
+        case .colleague: return Color(light: 0xA84B00, dark: 0xFFB340)
+        case .other: return Color(light: 0x7C3AED, dark: 0xC4B5FD)
+        }
+    }
+
+    static func avatarBackground(_ type: RelationshipType) -> Color {
+        switch type {
+        case .family: return Color(light: 0xFF2D55, lightAlpha: 0.13, dark: 0xFF375F, darkAlpha: 0.22)
+        case .friend: return Color(light: 0x007AFF, lightAlpha: 0.12, dark: 0x0A84FF, darkAlpha: 0.24)
+        case .colleague: return Color(light: 0xFF9500, lightAlpha: 0.16, dark: 0xFF9F0A, darkAlpha: 0.20)
+        case .other: return Color(light: 0x7C3AED, lightAlpha: 0.12, dark: 0xA78BFA, darkAlpha: 0.22)
+        }
+    }
+
+    static func icon(_ type: RelationshipType) -> String {
+        switch type {
+        case .family: return "house.fill"
+        case .friend: return "person.2.fill"
+        case .colleague: return "briefcase.fill"
+        case .other: return "person.fill"
+        }
+    }
+
+    /// Text on a filled accent chip (white in light mode, black in dark mode).
+    static let onAccent = Color(light: 0xFFFFFF, dark: 0x000000)
+}
+
+extension Person {
+    /// Optional text fields can come back as "" after an edit clears them.
+    static func nonEmpty(_ text: String?) -> String? {
+        guard let text, !text.trimmingCharacters(in: .whitespaces).isEmpty else { return nil }
+        return text
+    }
+
+    var subtitle: String? { Person.nonEmpty(relationshipDetail) }
+
+    var initials: String {
+        let first = firstName.prefix(1).uppercased()
+        let last = lastName?.prefix(1).uppercased() ?? ""
+        return first + last
+    }
+
+    /// Mobile first, then landline.
+    var callNumber: String? {
+        Person.nonEmpty(mobile) ?? Person.nonEmpty(phone)
+    }
+
+    /// Age they will turn on their next birthday.
+    var turningAge: Int? {
+        guard let days = daysUntilBirthday, let age else { return nil }
+        return days == 0 ? age : age + 1
+    }
+}
+
+/// "Today" / "Tomorrow" / "In 7 days"
+func birthdayWhen(_ days: Int, l10n: L10n) -> String {
+    switch days {
+    case 0: return L10n.today
+    case 1: return L10n.tomorrow
+    default: return l10n.inDays(days)
+    }
+}
+
+func openURL(_ string: String) {
+    if let url = URL(string: string) { UIApplication.shared.open(url) }
+}
+
+func dialable(_ number: String) -> String {
+    number.filter { $0.isNumber || $0 == "+" }
+}
+
+// MARK: - Contacts View
+
+/// Contacts tab (design 5a/5b): search, relationship filters, upcoming
+/// birthday cards, and A–Z grouped lists with a one-tap call button.
 struct ContactsView: View {
     @EnvironmentObject var peopleManager: PeopleManager
+    @ObservedObject private var l10n = L10n.shared
+
     @State private var searchText = ""
     @State private var selectedFilter: RelationshipType? = nil
     @State private var showingAddContact = false
@@ -13,74 +98,122 @@ struct ContactsView: View {
     @State private var importingCount = 0
     @State private var importResult: (success: Int, duplicates: Int)? = nil
     @FocusState private var isSearchFocused: Bool
-    
+
     private var filteredPeople: [Person] {
         var people = peopleManager.people
-        
-        // Filter by relationship type
+
         if let filter = selectedFilter {
             people = people.filter { $0.relationshipType == filter }
         }
-        
-        // Filter by search text
-        if !searchText.isEmpty {
-            let searchLower = searchText.lowercased()
+
+        let query = searchText.trimmingCharacters(in: .whitespaces).lowercased()
+        if !query.isEmpty {
             people = people.filter { person in
-                person.firstName.lowercased().contains(searchLower) ||
-                (person.lastName?.lowercased().contains(searchLower) ?? false) ||
-                (person.nickname?.lowercased().contains(searchLower) ?? false) ||
-                person.fullName.lowercased().contains(searchLower)
+                [person.fullName, person.nickname ?? "", person.relationshipDetail ?? ""]
+                    .contains { $0.lowercased().contains(query) }
             }
         }
-        
-        // Sort alphabetically
-        return people.sorted { $0.firstName < $1.firstName }
+
+        return people.sorted { $0.fullName.localizedStandardCompare($1.fullName) == .orderedAscending }
     }
-    
+
+    /// Contacts grouped by the first letter of their first name.
+    private var sections: [(letter: String, people: [Person])] {
+        var result: [(letter: String, people: [Person])] = []
+        for person in filteredPeople {
+            let letter = String(person.firstName.prefix(1)).uppercased()
+            if result.last?.letter == letter {
+                result[result.count - 1].people.append(person)
+            } else {
+                result.append((letter, [person]))
+            }
+        }
+        return result
+    }
+
     private var upcomingBirthdays: [Person] {
         peopleManager.getUpcomingBirthdays(days: 30)
     }
-    
+
+    private var showComingUp: Bool {
+        selectedFilter == nil && searchText.isEmpty && !upcomingBirthdays.isEmpty
+    }
+
     var body: some View {
         NavigationStack {
-            ZStack {
-                // Background — Sorbet "people" lavender tint
-                SorbetTheme.ViewTint.people.background
-                    .ignoresSafeArea()
-                    .onTapGesture {
-                        isSearchFocused = false
+            List {
+                Section {
+                    controls
+                }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+
+                if showComingUp {
+                    Section {
+                        comingUpCards
+                            .listRowInsets(EdgeInsets())
+                    } header: {
+                        sectionTitle(l10n.comingUp)
                     }
-                
-                VStack(spacing: 0) {
-                    // Header
-                    headerView
-                    
-                    // Filter chips
-                    filterChipsView
-                    
-                    // Search bar
-                    searchBarView
-                    
-                    // Contacts list
-                    if peopleManager.isLoading {
-                        Spacer()
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: SorbetTheme.ViewTint.people.accent))
-                        Spacer()
-                    } else {
-                        contactsListView
+                    .listRowBackground(Color.clear)
+                }
+
+                if filteredPeople.isEmpty && !peopleManager.isLoading {
+                    Section {
+                        emptyState
+                    }
+                    .listRowBackground(Color.clear)
+                }
+
+                ForEach(sections, id: \.letter) { section in
+                    Section {
+                        ForEach(section.people) { person in
+                            NavigationLink(value: person.id) {
+                                ContactRowView(person: person)
+                            }
+                        }
+                    } header: {
+                        sectionTitle(section.letter)
                     }
                 }
             }
-            .onTapGesture {
-                isSearchFocused = false
+            .listStyle(.insetGrouped)
+            .listSectionSpacing(.compact)
+            .scrollContentBackground(.hidden)
+            .background(NativePalette.background.ignoresSafeArea())
+            .contentMargins(.bottom, 100, for: .scrollContent)
+            .scrollDismissesKeyboard(.interactively)
+            .refreshable { await peopleManager.fetchPeople() }
+            .navigationTitle(L10n.contacts)
+            .navigationBarTitleDisplayMode(.large)
+            .navigationDestination(for: String.self) { id in
+                ContactDetailView(personId: id)
+            }
+            .toolbar {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button {
+                        showingContactPicker = true
+                    } label: {
+                        Image(systemName: "square.and.arrow.down")
+                    }
+                    .accessibilityLabel(l10n.importContacts)
+
+                    Button {
+                        showingAddContact = true
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                    .accessibilityLabel(l10n.newContact)
+                }
             }
             .onAppear {
-                Task {
-                    await peopleManager.fetchPeople()
-                }
+                Task { await peopleManager.fetchPeople() }
             }
-            .navigationBarHidden(true)
+            .sheet(isPresented: $showingAddContact) {
+                ContactFormSheet(person: nil)
+                    .environmentObject(peopleManager)
+            }
             .background(
                 ContactPicker(isPresented: $showingContactPicker) { contacts in
                     pickedContacts = contacts
@@ -108,8 +241,114 @@ struct ContactsView: View {
                 }
             }
         }
+        .tint(NativePalette.accent)
     }
-    
+
+    // MARK: - Header controls
+
+    private var controls: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(l10n.peopleCount(filteredPeople.count))
+                .font(.system(size: 15))
+                .foregroundStyle(NativePalette.muted)
+                .padding(.horizontal, 4)
+
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(NativePalette.muted)
+                TextField(l10n.searchPlaceholder, text: $searchText)
+                    .font(.system(size: 17))
+                    .focused($isSearchFocused)
+                    .submitLabel(.search)
+                    .autocorrectionDisabled()
+                if !searchText.isEmpty {
+                    Button {
+                        searchText = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(NativePalette.muted)
+                    }
+                    .buttonStyle(.borderless)
+                }
+            }
+            .padding(.horizontal, 12)
+            .frame(height: 40)
+            .background(NativePalette.segment, in: Capsule())
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    filterChip(l10n.filterAll, icon: nil, value: nil)
+                    filterChip(l10n.filterFamily, icon: ContactStyle.icon(.family), value: .family)
+                    filterChip(l10n.filterFriends, icon: ContactStyle.icon(.friend), value: .friend)
+                    filterChip(l10n.filterWork, icon: ContactStyle.icon(.colleague), value: .colleague)
+                    filterChip(l10n.filterOther, icon: ContactStyle.icon(.other), value: .other)
+                }
+            }
+            .scrollClipDisabled()
+        }
+        .padding(.bottom, 4)
+    }
+
+    private func filterChip(_ title: String, icon: String?, value: RelationshipType?) -> some View {
+        let isSelected = selectedFilter == value
+        return Button {
+            isSearchFocused = false
+            withAnimation(.snappy) { selectedFilter = value }
+        } label: {
+            HStack(spacing: 5) {
+                if let icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 13))
+                }
+                Text(title)
+                    .font(.system(size: 15, weight: .semibold))
+            }
+            .padding(.horizontal, 14)
+            .frame(height: 34)
+            .foregroundStyle(isSelected ? ContactStyle.onAccent : NativePalette.ink)
+            .background(isSelected ? NativePalette.accent : NativePalette.segment, in: Capsule())
+        }
+        .buttonStyle(.borderless)
+    }
+
+    private func sectionTitle(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 20, weight: .semibold))
+            .foregroundStyle(NativePalette.ink)
+            .textCase(nil)
+    }
+
+    // MARK: - Coming up
+
+    private var comingUpCards: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(upcomingBirthdays) { person in
+                    NavigationLink(value: person.id) {
+                        BirthdayCard(person: person)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .scrollClipDisabled()
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "person.crop.circle.badge.questionmark")
+                .font(.system(size: 44))
+                .foregroundStyle(NativePalette.faint)
+            Text(l10n.noContacts)
+                .font(.system(size: 17, weight: .semibold))
+            Text(l10n.noContactsSub)
+                .font(.system(size: 15))
+                .foregroundStyle(NativePalette.muted)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 50)
+    }
+
     // MARK: - Import Logic
     
     private func importContacts(_ pairs: [(CNContact, RelationshipType)]) async {
@@ -185,454 +424,327 @@ struct ContactsView: View {
     }
     
     // MARK: - Import Overlays
-    
+
     private var importingOverlay: some View {
         ZStack {
-            Color.black.opacity(0.6).ignoresSafeArea()
+            Color.black.opacity(0.4).ignoresSafeArea()
             VStack(spacing: 16) {
                 ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: SorbetTheme.ViewTint.people.accent))
                     .scaleEffect(1.3)
-                Text(L10n.shared.currentLanguage == .hebrew
-                     ? "מייבא \(importingCount) אנשי קשר..."
-                     : "Importing \(importingCount) contacts...")
+                Text(l10n.importingContacts(importingCount))
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(SorbetTheme.Palette.textPrimary)
             }
             .padding(30)
-            .background(SorbetTheme.Palette.surface)
-            .cornerRadius(16)
+            .background(NativePalette.surface, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
         }
     }
-    
+
     private func importResultOverlay(_ result: (success: Int, duplicates: Int)) -> some View {
-        let isHebrew = L10n.shared.currentLanguage == .hebrew
-        return ZStack {
-            Color.black.opacity(0.5).ignoresSafeArea()
+        ZStack {
+            Color.black.opacity(0.4).ignoresSafeArea()
             VStack(spacing: 12) {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 40))
-                    .foregroundColor(Color(hex: "10b981"))
-                
-                Text(isHebrew
-                     ? "יובאו \(result.success) אנשי קשר"
-                     : "\(result.success) contacts imported")
+                    .foregroundStyle(NativePalette.done)
+                Text(l10n.contactsImported(result.success))
                     .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(SorbetTheme.Palette.textPrimary)
-                
                 if result.duplicates > 0 {
-                    Text(isHebrew
-                         ? "\(result.duplicates) כבר קיימים (דולגו)"
-                         : "\(result.duplicates) already existed (skipped)")
-                        .font(.system(size: 14))
-                        .foregroundColor(SorbetTheme.Palette.textSecondary)
+                    Text(l10n.duplicatesSkipped(result.duplicates))
+                        .font(.system(size: 15))
+                        .foregroundStyle(NativePalette.muted)
                 }
             }
             .padding(30)
-            .background(SorbetTheme.Palette.surface)
-            .cornerRadius(16)
+            .background(NativePalette.surface, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
         }
         .transition(.opacity)
     }
-    
-    // MARK: - Header
-    
-    private var headerView: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(L10n.contacts)
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundColor(SorbetTheme.Palette.textPrimary)
-                
-                Text(contactsCountText)
-                    .font(.system(size: 14))
-                    .foregroundColor(SorbetTheme.Palette.textSecondary)
-            }
-            
-            Spacer()
-            
-            HStack(spacing: 12) {
-                Button(action: { showingContactPicker = true }) {
-                    Image(systemName: "square.and.arrow.down.on.square")
-                        .font(.system(size: 22))
-                        .foregroundColor(SorbetTheme.ViewTint.people.accent)
-                }
-                
-                Button(action: { showingAddContact = true }) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 28))
-                        .foregroundColor(SorbetTheme.ViewTint.people.accent)
-                }
-            }
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, 16)
-        .padding(.bottom, 12)
-    }
-    
-    private var contactsCountText: String {
-        let count = filteredPeople.count
-        let isHebrew = L10n.shared.currentLanguage == .hebrew
-        return isHebrew ? "\(count) אנשי קשר" : "\(count) contacts"
-    }
-    
-    // MARK: - Filter Chips
-    
-    private var filterChipsView: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                FilterChip(
-                    title: L10n.shared.currentLanguage == .hebrew ? "הכל" : "All",
-                    isSelected: selectedFilter == nil
-                ) {
-                    isSearchFocused = false
-                    selectedFilter = nil
-                }
-                
-                FilterChip(
-                    title: L10n.shared.currentLanguage == .hebrew ? "משפחה" : "Family",
-                    icon: "house.fill",
-                    isSelected: selectedFilter == .family
-                ) {
-                    isSearchFocused = false
-                    selectedFilter = selectedFilter == .family ? nil : .family
-                }
-                
-                FilterChip(
-                    title: L10n.shared.currentLanguage == .hebrew ? "חברים" : "Friends",
-                    icon: "person.2.fill",
-                    isSelected: selectedFilter == .friend
-                ) {
-                    isSearchFocused = false
-                    selectedFilter = selectedFilter == .friend ? nil : .friend
-                }
-                
-                FilterChip(
-                    title: L10n.shared.currentLanguage == .hebrew ? "עבודה" : "Work",
-                    icon: "briefcase.fill",
-                    isSelected: selectedFilter == .colleague
-                ) {
-                    isSearchFocused = false
-                    selectedFilter = selectedFilter == .colleague ? nil : .colleague
-                }
-                
-                FilterChip(
-                    title: L10n.shared.currentLanguage == .hebrew ? "אחר" : "Other",
-                    icon: "person.fill",
-                    isSelected: selectedFilter == .other
-                ) {
-                    isSearchFocused = false
-                    selectedFilter = selectedFilter == .other ? nil : .other
-                }
-            }
-            .padding(.horizontal, 20)
-        }
-        .padding(.bottom, 12)
-    }
-    
-    // MARK: - Search Bar
-    
-    private var searchBarView: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "magnifyingglass")
-                .foregroundColor(SorbetTheme.Palette.textTertiary)
-            
-            TextField(
-                L10n.shared.currentLanguage == .hebrew ? "חיפוש אנשי קשר..." : "Search contacts...",
-                text: $searchText
-            )
-            .textFieldStyle(.plain)
-            .foregroundColor(SorbetTheme.Palette.textPrimary)
-            .focused($isSearchFocused)
-            .submitLabel(.search)
-            .onSubmit {
-                isSearchFocused = false
-            }
-            
-            if !searchText.isEmpty {
-                Button(action: { 
-                    searchText = ""
-                    isSearchFocused = false
-                }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(SorbetTheme.Palette.textTertiary)
-                }
-            }
-        }
-        .padding(12)
-        .background(SorbetTheme.Palette.surface)
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(SorbetTheme.Palette.border, lineWidth: 1)
-        )
-        .padding(.horizontal, 20)
-        .padding(.bottom, 12)
-    }
-
-    // MARK: - Contacts List
-    
-    private var contactsListView: some View {
-        ScrollView {
-            LazyVStack(spacing: 12) {
-                // Upcoming birthdays section
-                if !upcomingBirthdays.isEmpty && selectedFilter == nil && searchText.isEmpty {
-                    upcomingBirthdaysSection
-                }
-                
-                // Contacts
-                if filteredPeople.isEmpty {
-                    emptyStateView
-                } else {
-                    ForEach(filteredPeople, id: \.id) { person in
-                        NavigationLink(destination: ContactDetailView(person: person)) {
-                            ContactRowView(person: person)
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    }
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 100)
-        }
-        .scrollDismissesKeyboard(.interactively)
-        .onTapGesture {
-            isSearchFocused = false
-        }
-        .refreshable {
-            await peopleManager.fetchPeople()
-        }
-    }
-    
-    // MARK: - Upcoming Birthdays Section
-    
-    private var upcomingBirthdaysSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("🎂")
-                    .font(.system(size: 18))
-                Text(L10n.shared.currentLanguage == .hebrew ? "ימי הולדת קרובים" : "Upcoming Birthdays")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(SorbetTheme.Palette.textPrimary)
-            }
-            .padding(.top, 8)
-            
-            ForEach(upcomingBirthdays.prefix(3), id: \.id) { person in
-                NavigationLink(destination: ContactDetailView(person: person)) {
-                    UpcomingBirthdayRow(person: person)
-                }
-                .buttonStyle(PlainButtonStyle())
-            }
-        }
-        .padding(.bottom, 8)
-    }
-    
-    private var emptyStateView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "person.crop.circle.badge.questionmark")
-                .font(.system(size: 50))
-                .foregroundColor(SorbetTheme.Palette.textTertiary)
-            
-            Text(L10n.shared.currentLanguage == .hebrew ? "לא נמצאו אנשי קשר" : "No contacts found")
-                .font(.system(size: 18, weight: .medium))
-                .foregroundColor(SorbetTheme.Palette.textTertiary)
-            
-            if !searchText.isEmpty {
-                Text(L10n.shared.currentLanguage == .hebrew ? "נסה לחפש משהו אחר" : "Try a different search")
-                    .font(.system(size: 14))
-                    .foregroundColor(SorbetTheme.Palette.textTertiary)
-            }
-        }
-        .padding(.top, 60)
-    }
 }
 
-// MARK: - Filter Chip
+// MARK: - Avatar
 
-struct FilterChip: View {
-    let title: String
-    var icon: String? = nil
-    let isSelected: Bool
-    let action: () -> Void
-    
+struct ContactAvatar: View {
+    let person: Person
+    let size: CGFloat
+
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 6) {
-                if let icon = icon {
-                    Image(systemName: icon)
-                        .font(.system(size: 12))
-                }
-                Text(title)
-                    .font(.system(size: 13, weight: .medium))
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .background(isSelected ? SorbetTheme.ViewTint.people.accent : SorbetTheme.Palette.surface)
-            .foregroundColor(isSelected ? .white : SorbetTheme.Palette.textSecondary)
-            .cornerRadius(20)
-            .overlay(
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(isSelected ? Color.clear : SorbetTheme.Palette.border, lineWidth: 1)
-            )
-        }
+        Text(person.initials)
+            .font(.system(size: size * 0.38, weight: .semibold))
+            .foregroundStyle(ContactStyle.avatarForeground(person.relationshipType))
+            .frame(width: size, height: size)
+            .background(Circle().fill(ContactStyle.avatarBackground(person.relationshipType)))
     }
 }
 
-// MARK: - Contact Row View
+// MARK: - Contact Row
 
 struct ContactRowView: View {
     let person: Person
-    
+    @ObservedObject private var l10n = L10n.shared
+
     var body: some View {
-        HStack(spacing: 14) {
-            // Avatar
-            ZStack {
-                Circle()
-                    .fill(avatarColor.opacity(0.2))
-                    .frame(width: 50, height: 50)
-                
-                Text(initials)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(avatarColor)
-            }
-            
-            // Info
-            VStack(alignment: .leading, spacing: 4) {
+        HStack(spacing: 12) {
+            ContactAvatar(person: person, size: 40)
+
+            VStack(alignment: .leading, spacing: 1) {
                 Text(person.fullName)
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(SorbetTheme.Palette.textPrimary)
-                
-                HStack(spacing: 8) {
-                    // Relationship
-                    Text(person.relationshipDetail ?? relationshipLabel)
-                        .font(.system(size: 12))
-                        .foregroundColor(avatarColor)
-                    
-                    // Birthday indicator
-                    if person.birthday != nil {
-                        if let days = person.daysUntilBirthday {
-                            if days == 0 {
-                                Text("🎂 " + (L10n.shared.currentLanguage == .hebrew ? "היום!" : "Today!"))
-                                    .font(.system(size: 11))
-                                    .foregroundColor(Color(hex: "f472b6"))
-                            } else if days <= 7 {
-                                Text("🎂 " + (L10n.shared.currentLanguage == .hebrew ? "עוד \(days) ימים" : "in \(days) days"))
-                                    .font(.system(size: 11))
-                                    .foregroundColor(Color(hex: "f472b6"))
-                            }
-                        }
+                    .font(.system(size: 17))
+                    .foregroundStyle(NativePalette.ink)
+                    .lineLimit(1)
+
+                HStack(spacing: 5) {
+                    Text(person.subtitle ?? l10n.relationshipName(person.relationshipType))
+                        .foregroundStyle(NativePalette.muted)
+                    if let days = person.daysUntilBirthday, days <= 7 {
+                        Text("· \(birthdayWhen(days, l10n: l10n))")
+                            .foregroundStyle(NativePalette.occasion)
                     }
                 }
+                .font(.system(size: 15))
+                .lineLimit(1)
             }
-            
-            Spacer()
-            
-            // Quick actions
-            HStack(spacing: 12) {
-                if let phone = person.phone, !phone.isEmpty {
-                    Button(action: { callPhone(phone) }) {
-                        Image(systemName: "phone.fill")
-                            .font(.system(size: 16))
-                            .foregroundColor(Color(hex: "10b981"))
-                    }
+            .alignmentGuide(.listRowSeparatorLeading) { $0[.leading] }
+
+            Spacer(minLength: 8)
+
+            if let number = person.callNumber {
+                Button {
+                    openURL("tel://\(dialable(number))")
+                } label: {
+                    Image(systemName: "phone.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(NativePalette.accent)
+                        .frame(width: 34, height: 34)
+                        .background(Circle().fill(NativePalette.accentSoft))
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel(l10n.call)
+            }
+        }
+        .padding(.vertical, 6)
+    }
+}
+
+// MARK: - Birthday Card
+
+struct BirthdayCard: View {
+    let person: Person
+    @ObservedObject private var l10n = L10n.shared
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                ContactAvatar(person: person, size: 44)
+                Spacer()
+                Image(systemName: "birthday.cake.fill")
+                    .font(.system(size: 18))
+                    .foregroundStyle(NativePalette.occasion)
+            }
+
+            VStack(alignment: .leading, spacing: 0) {
+                Text(person.fullName)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(NativePalette.ink)
+                    .lineLimit(1)
+                if let days = person.daysUntilBirthday {
+                    Text(birthdayWhen(days, l10n: l10n))
+                        .font(.system(size: 15))
+                        .foregroundStyle(NativePalette.occasion)
+                }
+                if let turning = person.turningAge {
+                    Text(l10n.willTurn(turning))
+                        .font(.system(size: 13))
+                        .foregroundStyle(NativePalette.muted)
                 }
             }
         }
         .padding(14)
-        .sorbetCard(radius: 12)
-    }
-
-    private var initials: String {
-        let first = person.firstName.prefix(1).uppercased()
-        let last = (person.lastName?.prefix(1).uppercased()) ?? ""
-        return first + last
-    }
-    
-    private var avatarColor: Color {
-        switch person.relationshipType {
-        case .family:
-            return Color(hex: "f472b6") // Pink
-        case .friend:
-            return Color(hex: "60a5fa") // Blue
-        case .colleague:
-            return Color(hex: "fbbf24") // Yellow
-        case .other:
-            return SorbetTheme.ViewTint.people.accent // Purple
-        }
-    }
-    
-    private var relationshipLabel: String {
-        let isHebrew = L10n.shared.currentLanguage == .hebrew
-        switch person.relationshipType {
-        case .family:
-            return isHebrew ? "משפחה" : "Family"
-        case .friend:
-            return isHebrew ? "חבר" : "Friend"
-        case .colleague:
-            return isHebrew ? "עבודה" : "Work"
-        case .other:
-            return isHebrew ? "אחר" : "Other"
-        }
-    }
-    
-    private func callPhone(_ phone: String) {
-        let cleaned = phone.replacingOccurrences(of: " ", with: "")
-            .replacingOccurrences(of: "-", with: "")
-        if let url = URL(string: "tel://\(cleaned)") {
-            UIApplication.shared.open(url)
-        }
+        .frame(width: 150, alignment: .leading)
+        .background(NativePalette.surface, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 }
 
-// MARK: - Upcoming Birthday Row
+// MARK: - Contact Form (add / edit)
 
-struct UpcomingBirthdayRow: View {
-    let person: Person
-    
+struct ContactFormSheet: View {
+    /// nil = create a new contact.
+    let person: Person?
+    var onDeleted: (() -> Void)? = nil
+
+    @EnvironmentObject var peopleManager: PeopleManager
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var l10n = L10n.shared
+
+    @State private var firstName = ""
+    @State private var lastName = ""
+    @State private var nickname = ""
+    @State private var relationshipType: RelationshipType = .friend
+    @State private var relationshipDetail = ""
+    @State private var mobile = ""
+    @State private var phone = ""
+    @State private var email = ""
+    @State private var hasBirthday = false
+    @State private var birthday = Date()
+    @State private var notes = ""
+    @State private var isSaving = false
+    @State private var failed = false
+    @State private var confirmingDelete = false
+
     var body: some View {
-        HStack(spacing: 12) {
-            Text("🎂")
-                .font(.system(size: 20))
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(person.fullName)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(SorbetTheme.Palette.textPrimary)
-                
-                if let days = person.daysUntilBirthday {
-                    Text(daysText(days))
-                        .font(.system(size: 12))
-                        .foregroundColor(Color(hex: "f472b6"))
+        NavigationStack {
+            Form {
+                Section {
+                    TextField(l10n.firstName, text: $firstName)
+                    TextField(l10n.lastName, text: $lastName)
+                    TextField(l10n.nickname, text: $nickname)
+                }
+
+                Section(l10n.relationship) {
+                    Picker(l10n.relationship, selection: $relationshipType) {
+                        ForEach(RelationshipType.allCases, id: \.self) { type in
+                            Text(l10n.relationshipName(type)).tag(type)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    TextField(l10n.relationshipDetail, text: $relationshipDetail)
+                }
+
+                Section {
+                    TextField(l10n.mobile, text: $mobile)
+                        .keyboardType(.phonePad)
+                    TextField(l10n.phone, text: $phone)
+                        .keyboardType(.phonePad)
+                    TextField(l10n.email, text: $email)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                }
+
+                Section {
+                    Toggle(l10n.hasBirthday, isOn: $hasBirthday.animation())
+                    if hasBirthday {
+                        DatePicker(l10n.birthday, selection: $birthday, displayedComponents: .date)
+                    }
+                }
+
+                Section(l10n.notes) {
+                    TextField(l10n.notes, text: $notes, axis: .vertical)
+                        .lineLimit(3...8)
+                }
+
+                if failed {
+                    Text(l10n.saveFailed)
+                        .foregroundStyle(NativePalette.high)
+                }
+
+                if person != nil {
+                    Section {
+                        Button(l10n.deleteContact, role: .destructive) {
+                            confirmingDelete = true
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
                 }
             }
-            
-            Spacer()
-            
-            if let age = person.age {
-                Text(L10n.shared.currentLanguage == .hebrew ? "ימלאו \(age + 1)" : "Turning \(age + 1)")
-                    .font(.system(size: 12))
-                    .foregroundColor(SorbetTheme.Palette.textSecondary)
+            .navigationTitle(person == nil ? l10n.newContact : l10n.editContact)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(L10n.cancel) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(L10n.save) { save() }
+                        .disabled(firstName.trimmingCharacters(in: .whitespaces).isEmpty || isSaving)
+                }
             }
+            .confirmationDialog(l10n.deleteConfirmMessage, isPresented: $confirmingDelete, titleVisibility: .visible) {
+                Button(l10n.delete, role: .destructive) { delete() }
+            }
+            .onAppear(perform: load)
         }
-        .padding(12)
-        .background(
-            LinearGradient(
-                colors: [Color(hex: "f472b6").opacity(0.1), Color.clear],
-                startPoint: .leading,
-                endPoint: .trailing
-            )
-        )
-        .cornerRadius(10)
+        .tint(NativePalette.accent)
+        .environment(\.layoutDirection, l10n.currentLanguage.isRTL ? .rightToLeft : .leftToRight)
     }
-    
-    private func daysText(_ days: Int) -> String {
-        let isHebrew = L10n.shared.currentLanguage == .hebrew
-        if days == 0 {
-            return isHebrew ? "היום!" : "Today!"
-        } else if days == 1 {
-            return isHebrew ? "מחר" : "Tomorrow"
-        } else {
-            return isHebrew ? "עוד \(days) ימים" : "In \(days) days"
+
+    private func load() {
+        guard let person else { return }
+        firstName = person.firstName
+        lastName = person.lastName ?? ""
+        nickname = person.nickname ?? ""
+        relationshipType = person.relationshipType
+        relationshipDetail = person.relationshipDetail ?? ""
+        mobile = person.mobile ?? ""
+        phone = person.phone ?? ""
+        email = person.email ?? ""
+        notes = person.notes ?? ""
+        if let date = person.birthday.flatMap(TasksView.isoDay.date(from:)) {
+            hasBirthday = true
+            birthday = date
+        }
+    }
+
+    private func value(_ text: String) -> String? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private func save() {
+        isSaving = true
+        failed = false
+        let birthdayString = hasBirthday ? TasksView.isoDay.string(from: birthday) : nil
+
+        Task {
+            do {
+                if let person {
+                    var input = UpdatePersonInput()
+                    input.firstName = value(firstName)
+                    // Empty strings (not nil) so a cleared field is saved as cleared.
+                    input.lastName = value(lastName) ?? ""
+                    input.nickname = value(nickname) ?? ""
+                    input.relationshipType = relationshipType
+                    input.relationshipDetail = value(relationshipDetail) ?? ""
+                    input.mobile = value(mobile) ?? ""
+                    input.phone = value(phone) ?? ""
+                    input.email = value(email) ?? ""
+                    input.birthday = birthdayString
+                    input.notes = value(notes) ?? ""
+                    _ = try await peopleManager.updatePerson(id: person.id, input: input)
+                } else {
+                    let input = CreatePersonInput(
+                        firstName: value(firstName) ?? firstName,
+                        lastName: value(lastName),
+                        nickname: value(nickname),
+                        relationshipType: relationshipType,
+                        relationshipDetail: value(relationshipDetail),
+                        phone: value(phone),
+                        mobile: value(mobile),
+                        email: value(email),
+                        birthday: birthdayString,
+                        notes: value(notes),
+                        userId: AuthManager.shared.currentUser?.id
+                    )
+                    _ = try await peopleManager.createPerson(input)
+                }
+                dismiss()
+            } catch {
+                print("❌ Failed to save contact: \(error)")
+                failed = true
+            }
+            isSaving = false
+        }
+    }
+
+    private func delete() {
+        guard let person else { return }
+        Task {
+            do {
+                try await peopleManager.deletePerson(id: person.id)
+                dismiss()
+                onDeleted?()
+            } catch {
+                print("❌ Failed to delete contact: \(error)")
+                failed = true
+            }
         }
     }
 }
@@ -641,4 +753,3 @@ struct UpcomingBirthdayRow: View {
     ContactsView()
         .environmentObject(PeopleManager.shared)
 }
-

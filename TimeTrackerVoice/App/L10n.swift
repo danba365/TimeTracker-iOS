@@ -75,7 +75,95 @@ final class L10n: ObservableObject {
     var undone: String { isHebrew ? "לא בוצע" : "Not Done" }
     var deleteConfirmTitle: String { isHebrew ? "מחיקת פריט" : "Delete Item" }
     var deleteConfirmMessage: String { isHebrew ? "האם אתה בטוח שברצונך למחוק פריט זה?" : "Are you sure you want to delete this item?" }
-    
+
+    // Week agenda / day focus
+    var thisWeek: String { isHebrew ? "השבוע" : "This week" }
+    var weekView: String { isHebrew ? "שבוע" : "Week" }
+    var upNext: String { isHebrew ? "הבא בתור" : "Up next" }
+    var laterToday: String { isHebrew ? "בהמשך היום" : "Later today" }
+    var later: String { isHebrew ? "בהמשך" : "Later" }
+    var anytime: String { isHebrew ? "בכל זמן" : "Anytime" }
+    var completedSection: String { isHebrew ? "הושלמו" : "Done" }
+    var now: String { isHebrew ? "עכשיו" : "Now" }
+    var markDone: String { isHebrew ? "בוצע" : "Done" }
+    func progress(done: Int, total: Int) -> String {
+        isHebrew ? "\(done) מתוך \(total) הושלמו" : "\(done) of \(total) done"
+    }
+    func startsIn(minutes: Int) -> String {
+        let h = minutes / 60, m = minutes % 60
+        if isHebrew { return "בעוד " + (h > 0 ? "\(h) ש׳ " : "") + "\(m) ד׳" }
+        return "in " + (h > 0 ? "\(h)h " : "") + "\(m)m"
+    }
+    func turning(_ age: Int) -> String { isHebrew ? "מלאו \(age)" : "Turning \(age)" }
+    func yearsCount(_ years: Int) -> String { isHebrew ? "\(years) שנים" : "\(years) years" }
+    func birthdayTitle(_ name: String) -> String { isHebrew ? "יום הולדת ל\(name)!" : "\(name)'s Birthday!" }
+    func priorityName(_ priority: Priority) -> String {
+        switch priority {
+        case .high: return isHebrew ? "גבוהה" : "High"
+        case .medium: return isHebrew ? "בינונית" : "Medium"
+        case .low: return isHebrew ? "נמוכה" : "Low"
+        }
+    }
+
+    // New task sheet
+    var newTask: String { isHebrew ? "משימה חדשה" : "New task" }
+    var titlePlaceholder: String { isHebrew ? "כותרת" : "Title" }
+    var taskLabel: String { isHebrew ? "משימה" : "Task" }
+    var dateLabel: String { isHebrew ? "תאריך" : "Date" }
+    var timeLabel: String { isHebrew ? "שעה" : "Time" }
+    var priorityLabel: String { isHebrew ? "עדיפות" : "Priority" }
+    var add: String { isHebrew ? "הוסף" : "Add" }
+    var saveFailed: String { isHebrew ? "השמירה נכשלה. נסה שוב." : "Couldn't save. Please try again." }
+
+    // MARK: - Contacts
+    var searchPlaceholder: String { isHebrew ? "חיפוש" : "Search" }
+    var filterAll: String { isHebrew ? "הכל" : "All" }
+    var filterFamily: String { isHebrew ? "משפחה" : "Family" }
+    var filterFriends: String { isHebrew ? "חברים" : "Friends" }
+    var filterWork: String { isHebrew ? "עבודה" : "Work" }
+    var filterOther: String { isHebrew ? "אחר" : "Other" }
+    var comingUp: String { isHebrew ? "ימי הולדת קרובים" : "Coming up" }
+    func inDays(_ n: Int) -> String { isHebrew ? "בעוד \(n) ימים" : "In \(n) days" }
+    func willTurn(_ n: Int) -> String { isHebrew ? "ימלאו \(n)" : "Turning \(n)" }
+    func ageLabel(_ n: Int) -> String { isHebrew ? "גיל \(n)" : "age \(n)" }
+    func peopleCount(_ n: Int) -> String { isHebrew ? "\(n) אנשי קשר" : "\(n) people" }
+    var call: String { isHebrew ? "התקשר" : "Call" }
+    var message: String { isHebrew ? "הודעה" : "Message" }
+    var email: String { isHebrew ? "אימייל" : "Email" }
+    var mobile: String { isHebrew ? "נייד" : "Mobile" }
+    var phone: String { isHebrew ? "טלפון" : "Phone" }
+    var birthday: String { isHebrew ? "יום הולדת" : "Birthday" }
+    var anniversary: String { isHebrew ? "יום נישואין" : "Anniversary" }
+    var notes: String { isHebrew ? "הערות" : "Notes" }
+    var edit: String { isHebrew ? "עריכה" : "Edit" }
+    var notSet: String { isHebrew ? "לא הוזן" : "Not set" }
+    var noContacts: String { isHebrew ? "לא נמצאו אנשי קשר" : "No contacts found" }
+    var noContactsSub: String { isHebrew ? "נסה לחפש משהו אחר" : "Try a different search" }
+    var importContacts: String { isHebrew ? "ייבוא אנשי קשר" : "Import contacts" }
+    var newContact: String { isHebrew ? "איש קשר חדש" : "New contact" }
+    var editContact: String { isHebrew ? "עריכת איש קשר" : "Edit contact" }
+    var firstName: String { isHebrew ? "שם פרטי" : "First name" }
+    var lastName: String { isHebrew ? "שם משפחה" : "Last name" }
+    var nickname: String { isHebrew ? "כינוי" : "Nickname" }
+    var relationship: String { isHebrew ? "קשר" : "Relationship" }
+    var relationshipDetail: String { isHebrew ? "תיאור (למשל אחות)" : "Description (e.g. Sister)" }
+    var hasBirthday: String { isHebrew ? "יש יום הולדת" : "Has birthday" }
+    var deleteContact: String { isHebrew ? "מחק איש קשר" : "Delete contact" }
+    func relationshipName(_ type: RelationshipType) -> String {
+        switch type {
+        case .family: return isHebrew ? "משפחה" : "Family"
+        case .friend: return isHebrew ? "חבר" : "Friend"
+        case .colleague: return isHebrew ? "עבודה" : "Work"
+        case .other: return isHebrew ? "אחר" : "Other"
+        }
+    }
+    func importingContacts(_ n: Int) -> String { isHebrew ? "מייבא \(n) אנשי קשר..." : "Importing \(n) contacts..." }
+    func contactsImported(_ n: Int) -> String { isHebrew ? "יובאו \(n) אנשי קשר" : "\(n) contacts imported" }
+    func duplicatesSkipped(_ n: Int) -> String { isHebrew ? "\(n) כבר קיימים (דולגו)" : "\(n) already existed (skipped)" }
+
+    /// Locale for date formatting in the current app language.
+    var locale: Locale { Locale(identifier: isHebrew ? "he" : "en_US") }
+
     // MARK: - Chat View
     var aiAssistant: String { isHebrew ? "עוזר AI" : "AI Assistant" }
     var askMeAboutTasks: String { isHebrew ? "שאל אותי על המשימות שלך" : "Ask me about your tasks" }

@@ -1,388 +1,254 @@
 import SwiftUI
 
-/// Full contact detail view showing all contact information
+/// Contact detail (design 5a/5b): large avatar, Call / Message / Email
+/// tiles, grouped details and notes. Reads the live contact by id so it
+/// refreshes after an edit.
 struct ContactDetailView: View {
-    let person: Person
+    let personId: String
+
+    @EnvironmentObject var peopleManager: PeopleManager
     @Environment(\.dismiss) private var dismiss
-    
-    private let isHebrew = L10n.shared.currentLanguage == .hebrew
-    
+    @ObservedObject private var l10n = L10n.shared
+    @State private var showingEdit = false
+
+    private var person: Person? {
+        peopleManager.people.first { $0.id == personId }
+    }
+
     var body: some View {
-        ZStack {
-            // Background — Sorbet "people" lavender tint
-            SorbetTheme.ViewTint.people.background
-                .ignoresSafeArea()
-            
-            ScrollView {
-                VStack(spacing: 24) {
-                    // Avatar & Name Header
-                    headerSection
-                    
-                    // Contact Actions (Call, Email)
-                    if person.mobile != nil || person.phone != nil || person.email != nil {
-                        contactActionsSection
-                    }
-                    
-                    // Details Sections
-                    detailsSection
-                    
-                    // Notes Section
-                    if let notes = person.notes, !notes.isEmpty {
+        ScrollView {
+            if let person {
+                VStack(spacing: 0) {
+                    header(person)
+                    actions(person)
+                    details(person)
+                    if let notes = Person.nonEmpty(person.notes) {
                         notesSection(notes)
                     }
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
-                .padding(.bottom, 100)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 120)
             }
         }
+        .background(NativePalette.background.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(SorbetTheme.ViewTint.people.background, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
-    }
-    
-    // MARK: - Header Section
-    
-    private var headerSection: some View {
-        VStack(spacing: 16) {
-            // Avatar
-            ZStack {
-                Circle()
-                    .fill(avatarColor.opacity(0.2))
-                    .frame(width: 100, height: 100)
-                
-                Text(initials)
-                    .font(.system(size: 36, weight: .bold))
-                    .foregroundColor(avatarColor)
-            }
-            
-            // Name
-            VStack(spacing: 4) {
-                Text(person.fullName)
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(SorbetTheme.Palette.textPrimary)
-                
-                if let nickname = person.nickname, !nickname.isEmpty {
-                    Text("\"\(nickname)\"")
-                        .font(.system(size: 16))
-                        .foregroundColor(SorbetTheme.Palette.textSecondary)
-                }
-                
-                // Relationship badge
-                HStack(spacing: 6) {
-                    Image(systemName: relationshipIcon)
-                        .font(.system(size: 12))
-                    Text(person.relationshipDetail ?? relationshipLabel)
-                        .font(.system(size: 14, weight: .medium))
-                }
-                .foregroundColor(avatarColor)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(avatarColor.opacity(0.15))
-                .cornerRadius(16)
-                .padding(.top, 8)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button(l10n.edit) { showingEdit = true }
+                    .fontWeight(.semibold)
+                    .disabled(person == nil)
             }
         }
-        .padding(.bottom, 8)
-    }
-    
-    // MARK: - Contact Actions
-    
-    private var contactActionsSection: some View {
-        HStack(spacing: 20) {
-            // Call - prefer mobile, fallback to phone
-            if let callNumber = person.mobile ?? person.phone, !callNumber.isEmpty {
-                ContactActionButton(
-                    icon: "phone.fill",
-                    label: isHebrew ? "התקשר" : "Call",
-                    color: Color(hex: "10b981")
-                ) {
-                    callPhone(callNumber)
-                }
-                
-                ContactActionButton(
-                    icon: "message.fill",
-                    label: isHebrew ? "הודעה" : "Message",
-                    color: Color(hex: "60a5fa")
-                ) {
-                    sendMessage(callNumber)
-                }
-            }
-            
-            if let email = person.email, !email.isEmpty {
-                ContactActionButton(
-                    icon: "envelope.fill",
-                    label: isHebrew ? "אימייל" : "Email",
-                    color: Color(hex: "f472b6")
-                ) {
-                    sendEmail(email)
-                }
-            }
+        .sheet(isPresented: $showingEdit) {
+            ContactFormSheet(person: person, onDeleted: { dismiss() })
+                .environmentObject(peopleManager)
         }
-        .padding(.vertical, 8)
+        .tint(NativePalette.accent)
     }
-    
-    // MARK: - Details Section
-    
-    private var detailsSection: some View {
+
+    // MARK: - Header
+
+    private func header(_ person: Person) -> some View {
         VStack(spacing: 0) {
-            // Mobile - always show
-            ContactDetailRow(
-                icon: "iphone",
-                label: isHebrew ? "נייד" : "Mobile",
-                value: person.mobile ?? (isHebrew ? "לא הוזן" : "Not set"),
-                iconColor: Color(hex: "10b981")
-            )
-            
-            Divider()
-                .background(SorbetTheme.Palette.border)
-            
-            // Email - always show
-            ContactDetailRow(
-                icon: "envelope.fill",
-                label: isHebrew ? "אימייל" : "Email",
-                value: person.email ?? (isHebrew ? "לא הוזן" : "Not set"),
-                iconColor: Color(hex: "60a5fa")
-            )
-            
-            Divider()
-                .background(SorbetTheme.Palette.border)
-            
-            // Phone (optional)
-            if let phone = person.phone, !phone.isEmpty {
-                ContactDetailRow(
-                    icon: "phone.fill",
-                    label: isHebrew ? "טלפון" : "Phone",
-                    value: phone,
-                    iconColor: Color(hex: "22d3ee")
-                )
-                
-                Divider()
-                    .background(SorbetTheme.Palette.border)
+            ContactAvatar(person: person, size: 96)
+
+            Text(person.fullName)
+                .font(.system(size: 28, weight: .bold))
+                .multilineTextAlignment(.center)
+                .padding(.top, 14)
+
+            if let nickname = Person.nonEmpty(person.nickname) {
+                Text("“\(nickname)”")
+                    .font(.system(size: 17))
+                    .foregroundStyle(NativePalette.muted)
+                    .padding(.top, 2)
             }
-            
-            // Birthday
-            if let birthday = person.birthday {
-                ContactDetailRow(
-                    icon: "gift.fill",
-                    label: isHebrew ? "יום הולדת" : "Birthday",
-                    value: formatBirthday(birthday),
-                    iconColor: Color(hex: "f472b6")
-                )
-                
-                if person.anniversary != nil {
-                    Divider()
-                        .background(SorbetTheme.Palette.border)
+
+            Label(person.subtitle ?? l10n.relationshipName(person.relationshipType),
+                  systemImage: ContactStyle.icon(person.relationshipType))
+                .font(.system(size: 15, weight: .semibold))
+                .labelStyle(TightLabelStyle())
+                .foregroundStyle(ContactStyle.avatarForeground(person.relationshipType))
+                .padding(.horizontal, 12)
+                .frame(height: 28)
+                .background(ContactStyle.avatarBackground(person.relationshipType), in: Capsule())
+                .padding(.top, 10)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 6)
+    }
+
+    // MARK: - Actions
+
+    @ViewBuilder
+    private func actions(_ person: Person) -> some View {
+        let number = person.callNumber
+        let email = Person.nonEmpty(person.email)
+
+        if number != nil || email != nil {
+            HStack(spacing: 10) {
+                if let number {
+                    actionTile(l10n.call, icon: "phone.fill") { openURL("tel://\(dialable(number))") }
+                    actionTile(l10n.message, icon: "message.fill") { openURL("sms://\(dialable(number))") }
+                }
+                if let email {
+                    actionTile(l10n.email, icon: "envelope.fill") { openURL("mailto:\(email)") }
                 }
             }
-            
-            // Anniversary
-            if let anniversary = person.anniversary {
-                ContactDetailRow(
-                    icon: "heart.fill",
-                    label: isHebrew ? "יום נישואין" : "Anniversary",
-                    value: formatDate(anniversary),
-                    iconColor: Color(hex: "ef4444")
-                )
+            .padding(.top, 22)
+        }
+    }
+
+    private func actionTile(_ label: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 20))
+                Text(label)
+                    .font(.system(size: 13, weight: .semibold))
+            }
+            .foregroundStyle(NativePalette.accent)
+            .frame(maxWidth: .infinity)
+            .frame(height: 68)
+            .background(NativePalette.surface, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Details
+
+    private struct DetailRow: Identifiable {
+        let id = UUID()
+        let label: String
+        let value: String
+        var isSet = true
+        var isLink = false
+        var icon: String? = nil
+        var url: String? = nil
+    }
+
+    private func detailRows(_ person: Person) -> [DetailRow] {
+        var rows: [DetailRow] = []
+
+        if let mobile = Person.nonEmpty(person.mobile) {
+            rows.append(DetailRow(label: l10n.mobile, value: mobile, isLink: true, url: "tel://\(dialable(mobile))"))
+        } else {
+            rows.append(DetailRow(label: l10n.mobile, value: l10n.notSet, isSet: false))
+        }
+
+        if let phone = Person.nonEmpty(person.phone) {
+            rows.append(DetailRow(label: l10n.phone, value: phone, isLink: true, url: "tel://\(dialable(phone))"))
+        }
+
+        if let email = Person.nonEmpty(person.email) {
+            rows.append(DetailRow(label: l10n.email, value: email, isLink: true, url: "mailto:\(email)"))
+        } else {
+            rows.append(DetailRow(label: l10n.email, value: l10n.notSet, isSet: false))
+        }
+
+        if let birthday = Person.nonEmpty(person.birthday).flatMap(TasksView.isoDay.date(from:)) {
+            var value = monthDay(birthday)
+            if let days = person.daysUntilBirthday, days <= 30, let turning = person.turningAge {
+                value += " · \(l10n.willTurn(turning)), \(birthdayWhen(days, l10n: l10n).lowercased())"
+            } else if let age = person.age {
+                value += " · \(l10n.ageLabel(age))"
+            }
+            rows.append(DetailRow(label: l10n.birthday, value: value, icon: "birthday.cake.fill"))
+        }
+
+        if let anniversary = Person.nonEmpty(person.anniversary).flatMap(TasksView.isoDay.date(from:)) {
+            let formatter = DateFormatter()
+            formatter.locale = l10n.locale
+            formatter.setLocalizedDateFormatFromTemplate("MMMMdyyyy")
+            rows.append(DetailRow(label: l10n.anniversary, value: formatter.string(from: anniversary), icon: "heart.fill"))
+        }
+
+        return rows
+    }
+
+    private func details(_ person: Person) -> some View {
+        let rows = detailRows(person)
+        return VStack(spacing: 0) {
+            ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
+                Button {
+                    if let url = row.url { openURL(url) }
+                } label: {
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(row.label)
+                                .font(.system(size: 13))
+                                .foregroundStyle(NativePalette.muted)
+                            Text(row.value)
+                                .font(.system(size: 17))
+                                .foregroundStyle(row.isLink ? NativePalette.accent : (row.isSet ? NativePalette.ink : NativePalette.faint))
+                                // Phone numbers and emails always read left-to-right.
+                                .environment(\.layoutDirection, row.isLink ? .leftToRight : l10n.currentLanguage.isRTL ? .rightToLeft : .leftToRight)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        if let icon = row.icon {
+                            Image(systemName: icon)
+                                .font(.system(size: 18))
+                                .foregroundStyle(NativePalette.occasion)
+                        }
+                    }
+                    .padding(.vertical, 11)
+                    .padding(.trailing, 16)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(row.url == nil)
+                .overlay(alignment: .bottom) {
+                    if index < rows.count - 1 {
+                        Rectangle()
+                            .fill(Color(uiColor: .separator))
+                            .frame(height: 0.5)
+                    }
+                }
+                .padding(.leading, 16)
             }
         }
-        .background(SorbetTheme.Palette.surface)
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(SorbetTheme.Palette.border, lineWidth: 1)
-        )
+        .background(NativePalette.surface, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .padding(.top, 22)
     }
-    
-    // MARK: - Notes Section
-    
+
     private func notesSection(_ notes: String) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: "note.text")
-                    .foregroundColor(Color(hex: "fbbf24"))
-                Text(isHebrew ? "הערות" : "Notes")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(SorbetTheme.Palette.textSecondary)
-            }
-            
-            Text(notes)
+        VStack(alignment: .leading, spacing: 7) {
+            Text(l10n.notes)
                 .font(.system(size: 15))
-                .foregroundColor(SorbetTheme.Palette.textPrimary)
-                .frame(maxWidth: .infinity, alignment: isHebrew ? .trailing : .leading)
-                .multilineTextAlignment(isHebrew ? .trailing : .leading)
+                .foregroundStyle(NativePalette.muted)
+                .padding(.horizontal, 16)
+            Text(notes)
+                .font(.system(size: 17))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 13)
+                .background(NativePalette.surface, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
         }
-        .padding(16)
-        .background(SorbetTheme.Palette.surface)
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(SorbetTheme.Palette.border, lineWidth: 1)
-        )
+        .padding(.top, 22)
     }
-    
-    // MARK: - Helpers
-    
-    private var initials: String {
-        let first = person.firstName.prefix(1).uppercased()
-        let last = (person.lastName?.prefix(1).uppercased()) ?? ""
-        return first + last
-    }
-    
-    private var avatarColor: Color {
-        switch person.relationshipType {
-        case .family: return Color(hex: "f472b6")
-        case .friend: return Color(hex: "60a5fa")
-        case .colleague: return Color(hex: "fbbf24")
-        case .other: return SorbetTheme.ViewTint.people.accent
-        }
-    }
-    
-    private var relationshipIcon: String {
-        switch person.relationshipType {
-        case .family: return "house.fill"
-        case .friend: return "person.2.fill"
-        case .colleague: return "briefcase.fill"
-        case .other: return "person.fill"
-        }
-    }
-    
-    private var relationshipLabel: String {
-        switch person.relationshipType {
-        case .family: return isHebrew ? "משפחה" : "Family"
-        case .friend: return isHebrew ? "חבר" : "Friend"
-        case .colleague: return isHebrew ? "עבודה" : "Work"
-        case .other: return isHebrew ? "אחר" : "Other"
-        }
-    }
-    
-    private func formatBirthday(_ dateStr: String) -> String {
+
+    private func monthDay(_ date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        guard let date = formatter.date(from: dateStr) else { return dateStr }
-        
-        formatter.dateFormat = isHebrew ? "d בMMMM" : "MMMM d"
-        formatter.locale = Locale(identifier: isHebrew ? "he_IL" : "en_US")
-        var result = formatter.string(from: date)
-        
-        if let age = person.age {
-            result += isHebrew ? " (גיל \(age))" : " (Age \(age))"
-        }
-        
-        return result
-    }
-    
-    private func formatDate(_ dateStr: String) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        guard let date = formatter.date(from: dateStr) else { return dateStr }
-        
-        formatter.dateFormat = isHebrew ? "d בMMMM yyyy" : "MMMM d, yyyy"
-        formatter.locale = Locale(identifier: isHebrew ? "he_IL" : "en_US")
+        formatter.locale = l10n.locale
+        formatter.setLocalizedDateFormatFromTemplate("MMMMd")
         return formatter.string(from: date)
     }
-    
-    private func callPhone(_ phone: String) {
-        let cleaned = phone.replacingOccurrences(of: " ", with: "")
-            .replacingOccurrences(of: "-", with: "")
-        if let url = URL(string: "tel://\(cleaned)") {
-            UIApplication.shared.open(url)
-        }
-    }
-    
-    private func sendMessage(_ phone: String) {
-        let cleaned = phone.replacingOccurrences(of: " ", with: "")
-            .replacingOccurrences(of: "-", with: "")
-        if let url = URL(string: "sms://\(cleaned)") {
-            UIApplication.shared.open(url)
-        }
-    }
-    
-    private func sendEmail(_ email: String) {
-        if let url = URL(string: "mailto:\(email)") {
-            UIApplication.shared.open(url)
-        }
-    }
 }
 
-// MARK: - Contact Action Button
-
-struct ContactActionButton: View {
-    let icon: String
-    let label: String
-    let color: Color
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 8) {
-                ZStack {
-                    Circle()
-                        .fill(color.opacity(0.15))
-                        .frame(width: 56, height: 56)
-                    
-                    Image(systemName: icon)
-                        .font(.system(size: 22))
-                        .foregroundColor(color)
-                }
-                
-                Text(label)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(SorbetTheme.Palette.textSecondary)
-            }
+/// Icon and title with a small gap, for the relationship pill.
+private struct TightLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 5) {
+            configuration.icon.font(.system(size: 13))
+            configuration.title
         }
-    }
-}
-
-// MARK: - Contact Detail Row
-
-struct ContactDetailRow: View {
-    let icon: String
-    let label: String
-    let value: String
-    let iconColor: Color
-    
-    var body: some View {
-        HStack(spacing: 14) {
-            Image(systemName: icon)
-                .font(.system(size: 16))
-                .foregroundColor(iconColor)
-                .frame(width: 24)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(label)
-                    .font(.system(size: 12))
-                    .foregroundColor(SorbetTheme.Palette.textTertiary)
-                
-                Text(value)
-                    .font(.system(size: 15))
-                    .foregroundColor(SorbetTheme.Palette.textPrimary)
-            }
-            
-            Spacer()
-        }
-        .padding(16)
     }
 }
 
 #Preview {
     NavigationStack {
-        ContactDetailView(person: Person(
-            id: "1",
-            firstName: "John",
-            lastName: "Doe",
-            nickname: "Johnny",
-            relationshipType: .friend,
-            relationshipDetail: "Best Friend",
-            phone: "+1 555 123 4567",
-            mobile: "+1 555 987 6543",
-            email: "john@example.com",
-            birthday: "1990-05-15",
-            anniversary: nil,
-            notes: "Met at college. Likes basketball.",
-            avatarUrl: nil,
-            createdAt: "2024-01-01",
-            updatedAt: "2024-01-01"
-        ))
+        ContactDetailView(personId: "1")
+            .environmentObject(PeopleManager.shared)
     }
 }

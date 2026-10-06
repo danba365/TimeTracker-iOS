@@ -12,7 +12,7 @@ struct MainTabView: View {
     @State private var selectedTab: Tab = .tasks
     
     enum Tab {
-        case tasks, chat, voice, contacts, lists
+        case tasks, chat, voice, contacts
     }
     
     var body: some View {
@@ -28,8 +28,6 @@ struct MainTabView: View {
                     VoiceView()
                 case .contacts:
                     ContactsView()
-                case .lists:
-                    ListsView()
                 }
             }
             .environmentObject(authManager)
@@ -99,63 +97,44 @@ struct VacationTodayBanner: View {
 
 // MARK: - Custom Tab Bar
 
+/// Floating tab bar (iOS 26 style): Tasks, Chat and Contacts in a glass
+/// capsule, with Voice as a separate round mic button.
 struct CustomTabBar: View {
     @Binding var selectedTab: MainTabView.Tab
-    
+
     var body: some View {
-        HStack(spacing: 0) {
-            TabBarButton(
-                icon: "calendar",
-                label: L10n.tabTasks,
-                isSelected: selectedTab == .tasks
-            ) {
-                selectedTab = .tasks
-            }
-            
-            TabBarButton(
-                icon: "message",
-                label: L10n.tabChat,
-                isSelected: selectedTab == .chat
-            ) {
-                selectedTab = .chat
-            }
-            
-            TabBarButton(
-                icon: "mic",
-                label: L10n.tabVoice,
-                isSelected: selectedTab == .voice
-            ) {
-                selectedTab = .voice
-            }
-            
-            TabBarButton(
-                icon: "person.2",
-                label: L10n.tabContacts,
-                isSelected: selectedTab == .contacts
-            ) {
-                selectedTab = .contacts
-            }
-            
-            TabBarButton(
-                icon: "tray.full",
-                label: L10n.tabLists,
-                isSelected: selectedTab == .lists
-            ) {
-                selectedTab = .lists
-            }
-        }
-        .padding(.top, 12)
-        .padding(.bottom, 28)
-        .background(
-            Rectangle()
-                .fill(SorbetTheme.Palette.surface)
-                .overlay(alignment: .top) {
-                    Rectangle()
-                        .fill(SorbetTheme.Palette.border)
-                        .frame(height: 1)
+        HStack(spacing: 12) {
+            HStack(spacing: 0) {
+                TabBarButton(icon: "calendar", label: L10n.tabTasks, isSelected: selectedTab == .tasks) {
+                    selectedTab = .tasks
                 }
-                .shadow(color: SorbetTheme.Shadow.lifted.color, radius: 16, y: -4)
-        )
+                TabBarButton(icon: "bubble.left", label: L10n.tabChat, isSelected: selectedTab == .chat) {
+                    selectedTab = .chat
+                }
+                TabBarButton(icon: "person.2", label: L10n.tabContacts, isSelected: selectedTab == .contacts) {
+                    selectedTab = .contacts
+                }
+            }
+            .padding(4)
+            .frame(height: 62)
+            .glassBackground(in: Capsule())
+
+            Button {
+                selectedTab = .voice
+            } label: {
+                Image(systemName: "mic.fill")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(NativePalette.accent)
+                    .frame(width: 62, height: 62)
+                    .background(Circle().fill(selectedTab == .voice ? NativePalette.accentSoft : .clear))
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .glassBackground(in: Circle())
+            .accessibilityLabel(L10n.tabVoice)
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 10)
     }
 }
 
@@ -166,32 +145,47 @@ struct TabBarButton: View {
     let label: String
     let isSelected: Bool
     let action: () -> Void
-    
-    // Some SF Symbols don't have .fill variants
-    private var iconName: String {
-        if isSelected {
-            // Calendar doesn't have .fill, use circle variant
-            if icon == "calendar" {
-                return "calendar.circle.fill"
-            }
-            return "\(icon).fill"
-        }
-        return icon
-    }
-    
+
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 4) {
-                Image(systemName: iconName)
-                    .font(.system(size: 22))
-                    .foregroundColor(isSelected ? SorbetTheme.ViewTint.people.accent : SorbetTheme.Palette.textTertiary)
-
+            VStack(spacing: 3) {
+                Image(systemName: isSelected && icon != "calendar" ? "\(icon).fill" : icon)
+                    .font(.system(size: 20, weight: .medium))
+                    .frame(height: 24)
                 Text(label)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(isSelected ? SorbetTheme.ViewTint.people.accent : SorbetTheme.Palette.textTertiary)
+                    .font(.system(size: 10, weight: .semibold))
             }
-            .frame(maxWidth: .infinity)
+            .foregroundStyle(isSelected ? NativePalette.accent : NativePalette.ink)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Capsule().fill(isSelected ? NativePalette.segment : .clear))
+            .contentShape(Capsule())
         }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Glass
+
+extension View {
+    /// Liquid Glass on iOS 26, a translucent material on earlier versions.
+    @ViewBuilder
+    func glassBackground<S: Shape>(in shape: S) -> some View {
+        #if compiler(>=6.2)
+        if #available(iOS 26.0, *) {
+            self.glassEffect(.regular.interactive(), in: shape)
+        } else {
+            materialBackground(in: shape)
+        }
+        #else
+        materialBackground(in: shape)
+        #endif
+    }
+
+    private func materialBackground<S: Shape>(in shape: S) -> some View {
+        self
+            .background(.ultraThinMaterial, in: shape)
+            .overlay(shape.stroke(Color.primary.opacity(0.08), lineWidth: 0.5))
+            .shadow(color: .black.opacity(0.08), radius: 10, y: 3)
     }
 }
 
