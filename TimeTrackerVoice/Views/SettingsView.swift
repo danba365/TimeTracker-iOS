@@ -12,6 +12,8 @@ struct SettingsView: View {
     @State private var showingClearCacheAlert = false
     @State private var showingSignOutAlert = false
     @State private var cacheCleared = false
+    @ObservedObject private var calendarManager = CalendarEventManager.shared
+    @State private var isConnectingCalendar = false
     
     var body: some View {
         NavigationView {
@@ -36,6 +38,11 @@ struct SettingsView: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
         }
         .environment(\.layoutDirection, l10n.currentLanguage.isRTL ? .rightToLeft : .leftToRight)
+        .task {
+            guard Config.isGoogleCalendarEnabled else { return }
+            let today = Date()
+            await calendarManager.fetch(from: today, to: today)
+        }
         .alert(L10n.enterAPIKey, isPresented: $showingAPIKeyAlert) {
             TextField(L10n.apiKeyPlaceholder, text: $apiKeyInput)
                 .textContentType(.password)
@@ -70,6 +77,9 @@ struct SettingsView: View {
         ScrollView {
             VStack(spacing: 24) {
                 accountSection
+                if Config.isGoogleCalendarEnabled {
+                    googleCalendarSection
+                }
                 preferencesSection
                 dataSection
                 aboutSection
@@ -106,6 +116,53 @@ struct SettingsView: View {
         }
     }
     
+    private var googleCalendarSection: some View {
+        SettingsSection(title: L10n.shared.googleCalendar) {
+            HStack(spacing: 14) {
+                Image(systemName: "calendar")
+                    .font(.system(size: 18))
+                    .foregroundColor(Color(uiColor: .systemBlue))
+                    .frame(width: 28)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L10n.shared.googleCalendar)
+                        .font(.system(size: 16))
+                        .foregroundColor(.white)
+                    Text(calendarManager.isConnected ? L10n.shared.connected
+                         : calendarManager.needsReconnect ? L10n.shared.reconnectGoogleCalendar
+                         : L10n.shared.notConnected)
+                        .font(.system(size: 12))
+                        .foregroundColor(Color(hex: "64748b"))
+                }
+
+                Spacer()
+
+                if isConnectingCalendar {
+                    ProgressView()
+                } else if calendarManager.isConnected {
+                    Button(L10n.shared.disconnect) {
+                        Task { await calendarManager.disconnect() }
+                    }
+                    .foregroundColor(Color(hex: "f87171"))
+                } else {
+                    Button(L10n.shared.connectGoogleCalendar) {
+                        isConnectingCalendar = true
+                        Task {
+                            if await AuthManager.shared.connectGoogleCalendar() {
+                                let today = Date()
+                                await calendarManager.fetch(from: today, to: today)
+                            }
+                            isConnectingCalendar = false
+                        }
+                    }
+                    .foregroundColor(Color(hex: "a78bfa"))
+                }
+            }
+            .font(.system(size: 14, weight: .semibold))
+            .padding(16)
+        }
+    }
+
     private var preferencesSection: some View {
         SettingsSection(title: L10n.preferences) {
             VStack(spacing: 0) {

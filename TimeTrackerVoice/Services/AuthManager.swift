@@ -109,13 +109,12 @@ class AuthManager: ObservableObject {
     /// Used from Settings and the "Reconnect" hint.
     func connectGoogleCalendar() async -> Bool {
         guard Config.isGoogleCalendarEnabled else { return false }
-        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let rootViewController = windowScene.windows.first?.rootViewController else {
+        guard let presenter = topmostViewController() else {
             return false
         }
         do {
             let result = try await GIDSignIn.sharedInstance.signIn(
-                withPresenting: rootViewController,
+                withPresenting: presenter,
                 hint: currentUser?.email,
                 additionalScopes: [Config.googleCalendarScope]
             )
@@ -127,6 +126,19 @@ class AuthManager: ObservableObject {
         }
     }
     
+    /// Topmost presented view controller, so Google's UI can appear over a sheet (e.g. Settings).
+    private func topmostViewController() -> UIViewController? {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene else {
+            return nil
+        }
+        let window = windowScene.windows.first(where: { $0.isKeyWindow }) ?? windowScene.windows.first
+        var top = window?.rootViewController
+        while let presented = top?.presentedViewController {
+            top = presented
+        }
+        return top
+    }
+
     private func exchangeGoogleTokenWithSupabase(idToken: String) async throws {
         let url = URL(string: "\(Config.supabaseURL)/auth/v1/token?grant_type=id_token")!
         var request = URLRequest(url: url)
