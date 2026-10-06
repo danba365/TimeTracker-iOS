@@ -61,6 +61,9 @@ class AuthManager: ObservableObject {
         UserDefaults.standard.removeObject(forKey: "user_id")
         UserDefaults.standard.removeObject(forKey: "user_email")
         
+        // Drop cached Google Calendar data so it can't leak to the next user
+        Task { @MainActor in CalendarEventManager.shared.reset() }
+        
         // Sign out of Google
         GIDSignIn.sharedInstance.signOut()
     }

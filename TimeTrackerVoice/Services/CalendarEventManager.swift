@@ -39,8 +39,21 @@ final class CalendarEventManager: ObservableObject {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard (response as? HTTPURLResponse)?.statusCode == 200 else { return }
             let decoded = try JSONDecoder().decode(CalendarEventsResponse.self, from: data)
-            apply(decoded)
-            UserDefaults.standard.set(data, forKey: cacheKey)
+            let fromDay = TasksView.isoDay.string(from: from)
+            let toDay = TasksView.isoDay.string(from: to)
+            let merged: [CalendarEvent]
+            if decoded.connected {
+                // yyyy-MM-dd compares correctly as a string.
+                let outside = events.filter { $0.date < fromDay || $0.date > toDay }
+                merged = outside + decoded.events
+            } else {
+                merged = []
+            }
+            let result = CalendarEventsResponse(connected: decoded.connected, reconnect: decoded.reconnect, events: merged)
+            apply(result)
+            if let encoded = try? JSONEncoder().encode(result) {
+                UserDefaults.standard.set(encoded, forKey: cacheKey)
+            }
         } catch {
             print("⚠️ Google Calendar fetch failed: \(error)")
         }
@@ -73,7 +86,14 @@ final class CalendarEventManager: ObservableObject {
         guard let url = URL(string: Config.calendarConnectURL), var request = authorizedRequest(url) else { return }
         request.httpMethod = "DELETE"
         _ = try? await URLSession.shared.data(for: request)
-        apply(CalendarEventsResponse(connected: false, reconnect: nil, events: []))
+        reset()
+    }
+
+    /// Clear in-memory state and the on-disk cache (sign-out / user switch / disconnect).
+    func reset() {
+        events = []
+        isConnected = false
+        needsReconnect = false
         UserDefaults.standard.removeObject(forKey: cacheKey)
     }
 
