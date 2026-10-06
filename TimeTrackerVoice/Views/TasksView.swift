@@ -142,7 +142,7 @@ struct TasksView: View {
             }
             .onReceive(minuteTimer) { now = $0 }
             .task(id: weekStart) {
-                if let last = weekDays.last {
+                if Config.isGoogleCalendarEnabled, let last = weekDays.last {
                     await calendarManager.fetch(from: weekStart, to: last)
                 }
             }
@@ -427,7 +427,7 @@ struct TasksView: View {
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(NativePalette.medium)
             }
-            if calendarManager.needsReconnect {
+            if Config.isGoogleCalendarEnabled && calendarManager.needsReconnect {
                 Button {
                     Task {
                         if await AuthManager.shared.connectGoogleCalendar(), let last = weekDays.last {
@@ -523,7 +523,7 @@ struct TasksView: View {
         await taskManager.fetchCategories()
         await peopleManager.fetchPeople()
         await eventManager.fetchEvents()
-        if let last = weekDays.last { await calendarManager.fetch(from: weekStart, to: last) }
+        if Config.isGoogleCalendarEnabled, let last = weekDays.last { await calendarManager.fetch(from: weekStart, to: last) }
     }
 
     // MARK: - Data
