@@ -14,6 +14,7 @@ enum NativePalette {
     static let high = Color(uiColor: .systemRed)
     static let medium = Color(light: 0xE08600, dark: 0xFF9F0A)
     static let low = Color(light: 0x28A745, dark: 0x30D158)
+    static let googleEvent = Color(uiColor: .systemBlue)
 
     static let ink = Color(uiColor: .label)
     static let muted = Color(uiColor: .secondaryLabel)
@@ -51,7 +52,7 @@ extension Color {
 
 /// One row in the agenda: a task, reminder, birthday or event, normalized for display.
 struct AgendaItem: Identifiable {
-    enum Kind { case task, reminder, birthday, event }
+    enum Kind { case task, reminder, birthday, event, calendar }
 
     let id: String
     let kind: Kind
@@ -64,6 +65,7 @@ struct AgendaItem: Identifiable {
     let isRecurring: Bool
     let eventType: EventType?
     let task: TaskItem?
+    var calendarEvent: CalendarEvent? = nil
 
     var hasTime: Bool { startTime != nil }
     var isOccasion: Bool { kind == .birthday || kind == .event }
@@ -91,6 +93,7 @@ struct TasksView: View {
     @EnvironmentObject var eventManager: EventManager
     @ObservedObject private var networkMonitor = NetworkMonitor.shared
     @ObservedObject private var l10n = L10n.shared
+    @ObservedObject private var calendarManager = CalendarEventManager.shared
 
     enum Mode: String { case week, day }
 
@@ -100,6 +103,7 @@ struct TasksView: View {
     @State private var showDone = false
     @State private var showingAddTask = false
     @State private var openedTask: TaskItem?
+    @State private var openedCalendarEvent: CalendarEvent?
     @State private var now = Date()
 
     private let calendar = Calendar.current
@@ -129,10 +133,19 @@ struct TasksView: View {
                 NewTaskSheet(defaultDate: mode == .day ? selectedDate : Date())
                     .environmentObject(taskManager)
             }
+            .sheet(item: $openedCalendarEvent) { event in
+                GoogleEventSheet(event: event)
+                    .presentationDetents([.medium])
+            }
             .onAppear {
                 Task { await taskManager.fetchTasks() }
             }
             .onReceive(minuteTimer) { now = $0 }
+            .task(id: weekStart) {
+                if let last = weekDays.last {
+                    await calendarManager.fetch(from: weekStart, to: last)
+                }
+            }
         }
         .tint(NativePalette.accent)
     }
@@ -414,6 +427,20 @@ struct TasksView: View {
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(NativePalette.medium)
             }
+            if calendarManager.needsReconnect {
+                Button {
+                    Task {
+                        if await AuthManager.shared.connectGoogleCalendar(), let last = weekDays.last {
+                            await calendarManager.fetch(from: weekStart, to: last)
+                        }
+                    }
+                } label: {
+                    Label(l10n.reconnectGoogleCalendar, systemImage: "exclamationmark.arrow.triangle.2.circlepath")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(NativePalette.googleEvent)
+                }
+                .buttonStyle(.borderless)
+            }
             Text(text)
                 .font(.system(size: 15))
                 .foregroundStyle(NativePalette.muted)
@@ -429,6 +456,7 @@ struct TasksView: View {
         .contentShape(Rectangle())
         .onTapGesture {
             if let task = item.task { openedTask = task }
+            if let event = item.calendarEvent { openedCalendarEvent = event }
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             if let task = item.task {
@@ -495,6 +523,7 @@ struct TasksView: View {
         await taskManager.fetchCategories()
         await peopleManager.fetchPeople()
         await eventManager.fetchEvents()
+        if let last = weekDays.last { await calendarManager.fetch(from: weekStart, to: last) }
     }
 
     // MARK: - Data
@@ -570,7 +599,21 @@ struct TasksView: View {
             )
         }
 
-        return reminders + birthdays + events + tasks
+        let googleEvents = calendarManager.events(on: date).map { event in
+            AgendaItem(
+                id: "gcal-\(event.id)", kind: .calendar, title: event.title,
+                meta: event.location ?? l10n.googleCalendar, metaColor: NativePalette.googleEvent,
+                startTime: event.startTime, endTime: event.endTime,
+                isDone: false, isRecurring: false, eventType: nil, task: nil,
+                calendarEvent: event
+            )
+        }
+        let timedGoogle = googleEvents.filter(\.hasTime)
+        let allDayGoogle = googleEvents.filter { !$0.hasTime }
+
+        // Timed Google events merge into the time-ordered task list; all-day ones sit with occasions.
+        let timed = (tasks + timedGoogle).sorted { ($0.startMinutes ?? Int.max) < ($1.startMinutes ?? Int.max) }
+        return reminders + birthdays + events + allDayGoogle + timed
     }
 
     private func birthdayPeople(on date: Date) -> [Person] {
@@ -666,7 +709,7 @@ private struct DayFocus {
 
     init(items: [AgendaItem], isToday: Bool, now: Date, calendar: Calendar) {
         let nowMinutes = calendar.component(.hour, from: now) * 60 + calendar.component(.minute, from: now)
-        let open = items.filter { !$0.isDone && !$0.isOccasion }
+        let open = items.filter { !$0.isDone && !$0.isOccasion && $0.kind != .calendar }
         let timedOpen = open.filter(\.hasTime)
 
         // Today: the first timed item that hasn't started more than 15 min ago.
@@ -769,6 +812,10 @@ struct AgendaRowView: View {
             Image(systemName: "birthday.cake.fill")
                 .font(.system(size: 20))
                 .foregroundStyle(NativePalette.occasion)
+        case .calendar:
+            Image(systemName: "calendar")
+                .font(.system(size: 20))
+                .foregroundStyle(NativePalette.googleEvent)
         case .event:
             Image(systemName: item.eventType == .anniversary ? "heart.fill" : "star.fill")
                 .font(.system(size: 20))
@@ -885,6 +932,50 @@ struct NewTaskSheet: View {
 extension TaskItem: Hashable {
     static func == (lhs: TaskItem, rhs: TaskItem) -> Bool { lhs.id == rhs.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
+}
+
+// MARK: - Google Event Sheet
+
+struct GoogleEventSheet: View {
+    let event: CalendarEvent
+    @ObservedObject private var l10n = L10n.shared
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label(l10n.googleCalendar, systemImage: "calendar")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(NativePalette.googleEvent)
+            Text(event.title)
+                .font(.system(size: 24, weight: .bold))
+            Text(timeText)
+                .font(.system(size: 17))
+                .foregroundStyle(NativePalette.muted)
+            if let location = event.location, !location.isEmpty {
+                Label(location, systemImage: "mappin.and.ellipse")
+                    .font(.system(size: 17))
+            }
+            Spacer()
+            if let link = event.link, let url = URL(string: link) {
+                Link(destination: url) {
+                    Text(l10n.openInGoogleCalendar)
+                        .font(.system(size: 17, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                        .background(NativePalette.googleEvent.opacity(0.15), in: Capsule())
+                }
+                .foregroundStyle(NativePalette.googleEvent)
+            }
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .environment(\.layoutDirection, l10n.currentLanguage.isRTL ? .rightToLeft : .leftToRight)
+    }
+
+    private var timeText: String {
+        guard let start = event.startTime else { return l10n.allDay }
+        guard let end = event.endTime else { return start }
+        return "\(start) – \(end)"
+    }
 }
 
 #Preview {

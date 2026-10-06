@@ -83,6 +83,14 @@ final class L10n: ObservableObject {
     var laterToday: String { isHebrew ? "בהמשך היום" : "Later today" }
     var later: String { isHebrew ? "בהמשך" : "Later" }
     var anytime: String { isHebrew ? "בכל זמן" : "Anytime" }
+    var googleCalendar: String { isHebrew ? "יומן Google" : "Google Calendar" }
+    var allDay: String { isHebrew ? "כל היום" : "All day" }
+    var openInGoogleCalendar: String { isHebrew ? "פתח ביומן Google" : "Open in Google Calendar" }
+    var reconnectGoogleCalendar: String { isHebrew ? "התחבר מחדש ליומן Google" : "Reconnect Google Calendar" }
+    var connectGoogleCalendar: String { isHebrew ? "חבר את יומן Google" : "Connect Google Calendar" }
+    var disconnect: String { isHebrew ? "נתק" : "Disconnect" }
+    var connected: String { isHebrew ? "מחובר" : "Connected" }
+    var notConnected: String { isHebrew ? "לא מחובר" : "Not connected" }
     var completedSection: String { isHebrew ? "הושלמו" : "Done" }
     var now: String { isHebrew ? "עכשיו" : "Now" }
     var markDone: String { isHebrew ? "בוצע" : "Done" }
