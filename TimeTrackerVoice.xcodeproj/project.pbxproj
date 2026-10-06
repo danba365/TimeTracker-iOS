@@ -39,6 +39,8 @@
 		F0377CA10F15503727AE85FA /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A955FC5339920743150036A6 /* SettingsView.swift */; };
 		F282E300B5FF7CE32442566A /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00D5D11E54C27CCBA0960448 /* Config.swift */; };
 		F3768B4A6FF20021BE346538 /* VacationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2112563B8DB7898E66546049 /* VacationManager.swift */; };
+		A1C0FFEE0000000000000001 /* CalendarEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000000002 /* CalendarEvent.swift */; };
+		A1C0FFEE0000000000000003 /* CalendarEventManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000000004 /* CalendarEventManager.swift */; };
 		F4C589B73616A8B5BC529A98 /* VoiceState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5EAE457C9906B6A456D2D48 /* VoiceState.swift */; };
 		FCC2ABADBA2DCC0BC9E88868 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DEDCF222DC775249AD1DBDE6 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
@@ -49,6 +51,8 @@
 		18540623942D6EA0151F7DF0 /* EventManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventManager.swift; sourceTree = "<group>"; };
 		1CBBA4C145D6716BB9707F68 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		2112563B8DB7898E66546049 /* VacationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VacationManager.swift; sourceTree = "<group>"; };
+		A1C0FFEE0000000000000002 /* CalendarEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarEvent.swift; sourceTree = "<group>"; };
+		A1C0FFEE0000000000000004 /* CalendarEventManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarEventManager.swift; sourceTree = "<group>"; };
 		2293BE54AE90FD05E806AAB1 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		2BF30D6DDB242B2ABF1DB321 /* PeopleManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeopleManager.swift; sourceTree = "<group>"; };
 		2D3FD0263B3A11FBBA221B23 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
@@ -145,6 +149,7 @@
 		8A5DFE08CEF31543ECEEE00B /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				A1C0FFEE0000000000000002 /* CalendarEvent.swift */,
 				516A5D11831B35E6661F3CE8 /* Event.swift */,
 				BAC6BB8463FA287ED632AE1B /* Person.swift */,
 				78439F0D6785C0874C264021 /* Task.swift */,
@@ -158,6 +163,7 @@
 			children = (
 				53EA97FB722407D2230B4B9C /* AudioStreamManager.swift */,
 				2D3FD0263B3A11FBBA221B23 /* AuthManager.swift */,
+				A1C0FFEE0000000000000004 /* CalendarEventManager.swift */,
 				18540623942D6EA0151F7DF0 /* EventManager.swift */,
 				2BF30D6DDB242B2ABF1DB321 /* PeopleManager.swift */,
 				4FDA47019FA9E3F0535A5A64 /* PromptManager.swift */,
@@ -301,6 +307,8 @@
 				DD870AD22053D46299184719 /* TasksView.swift in Sources */,
 				CDC44DD0190828061EA22FDA /* TimeTrackerVoiceApp.swift in Sources */,
 				F3768B4A6FF20021BE346538 /* VacationManager.swift in Sources */,
+				A1C0FFEE0000000000000001 /* CalendarEvent.swift in Sources */,
+				A1C0FFEE0000000000000003 /* CalendarEventManager.swift in Sources */,
 				916CE8AD66B97952C5DD5B4B /* VoiceOrbView.swift in Sources */,
 				F4C589B73616A8B5BC529A98 /* VoiceState.swift in Sources */,
 				265D0B7AEB713522D3281186 /* VoiceView.swift in Sources */,
