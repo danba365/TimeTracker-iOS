@@ -61,9 +61,8 @@ enum Config {
 
     /// Web OAuth client ID (the one Supabase uses). Passed to Google Sign-In as
     /// serverClientID so it returns a serverAuthCode our backend can exchange.
-    /// nil until set from docs/GOOGLE_CALENDAR_SETUP.md step 1.4 (web repo);
-    /// while nil, the app doesn't ask for calendar access.
-    static let googleServerClientID: String? = nil
+    /// Set to nil to switch the Google Calendar feature off (no calendar access requested).
+    static let googleServerClientID: String? = "914000186889-lh95gmhn6vrs988r05p0e569b2mm1b2j.apps.googleusercontent.com"
 
     /// True once the server client ID is configured.
     static var isGoogleCalendarEnabled: Bool { googleServerClientID != nil }
