@@ -1,106 +1,513 @@
 import SwiftUI
 
-/// Weekly tasks view displaying tasks organized by day
+// MARK: - Native Palette
+// "iOS 26 native" direction (design option 4): system label / grouped
+// background colors, system red / orange / green / pink / cyan, and the app
+// violet as tint. Every color adapts to light and dark mode.
+
+enum NativePalette {
+    static let accent = Color(light: 0x7C3AED, dark: 0xA78BFA)
+    static let accentSoft = Color(light: 0x7C3AED, lightAlpha: 0.12, dark: 0xA78BFA, darkAlpha: 0.18)
+    static let reminder = Color(light: 0x0091B0, dark: 0x3CD3FE)
+    static let occasion = Color(light: 0xE0245E, dark: 0xFF375F)
+    static let done = Color(uiColor: .systemGreen)
+    static let high = Color(uiColor: .systemRed)
+    static let medium = Color(light: 0xE08600, dark: 0xFF9F0A)
+    static let low = Color(light: 0x28A745, dark: 0x30D158)
+    static let googleEvent = Color(uiColor: .systemBlue)
+
+    static let ink = Color(uiColor: .label)
+    static let muted = Color(uiColor: .secondaryLabel)
+    static let faint = Color(uiColor: .tertiaryLabel)
+    static let background = Color(uiColor: .systemGroupedBackground)
+    static let surface = Color(uiColor: .secondarySystemGroupedBackground)
+    static let segment = Color(uiColor: .tertiarySystemFill)
+
+    static func priority(_ priority: Priority) -> Color {
+        switch priority {
+        case .high: return high
+        case .medium: return medium
+        case .low: return low
+        }
+    }
+}
+
+extension Color {
+    /// A color that resolves to a different hex value in light and dark mode.
+    init(light: UInt32, lightAlpha: CGFloat = 1, dark: UInt32, darkAlpha: CGFloat = 1) {
+        self.init(uiColor: UIColor { traits in
+            let isDark = traits.userInterfaceStyle == .dark
+            let hex = isDark ? dark : light
+            return UIColor(
+                red: CGFloat((hex >> 16) & 0xFF) / 255,
+                green: CGFloat((hex >> 8) & 0xFF) / 255,
+                blue: CGFloat(hex & 0xFF) / 255,
+                alpha: isDark ? darkAlpha : lightAlpha
+            )
+        })
+    }
+}
+
+// MARK: - Agenda Item
+
+/// One row in the agenda: a task, reminder, birthday or event, normalized for display.
+struct AgendaItem: Identifiable {
+    enum Kind { case task, reminder, birthday, event, calendar }
+
+    let id: String
+    let kind: Kind
+    let title: String
+    let meta: String
+    let metaColor: Color
+    let startTime: String?  // HH:mm
+    let endTime: String?    // HH:mm
+    let isDone: Bool
+    let isRecurring: Bool
+    let eventType: EventType?
+    let task: TaskItem?
+    var calendarEvent: CalendarEvent? = nil
+
+    var hasTime: Bool { startTime != nil }
+    var isOccasion: Bool { kind == .birthday || kind == .event }
+
+    var startMinutes: Int? {
+        guard let parts = startTime?.split(separator: ":"), parts.count >= 2,
+              let h = Int(parts[0]), let m = Int(parts[1]) else { return nil }
+        return h * 60 + m
+    }
+
+    var timeRange: String {
+        guard let start = startTime else { return "" }
+        guard let end = endTime else { return start }
+        return "\(start) – \(end)"
+    }
+}
+
+// MARK: - Tasks View
+
+/// Tasks tab: a week agenda (design 4a/4b) and a focused day view with
+/// "Up next" (design 4c/4d). The toolbar pill switches between them.
 struct TasksView: View {
     @EnvironmentObject var taskManager: TaskManager
     @EnvironmentObject var peopleManager: PeopleManager
     @EnvironmentObject var eventManager: EventManager
     @ObservedObject private var networkMonitor = NetworkMonitor.shared
-    @State private var selectedDate = Date()
+    @ObservedObject private var l10n = L10n.shared
+    @ObservedObject private var calendarManager = CalendarEventManager.shared
+
+    enum Mode: String { case week, day }
+
+    @AppStorage("tasks_view_mode") private var mode: Mode = .week
+    @State private var weekStart = Calendar.current.startOfDay(for: Date())
+    @State private var selectedDate = Calendar.current.startOfDay(for: Date())
+    @State private var showDone = false
     @State private var showingAddTask = false
-    
+    @State private var openedTask: TaskItem?
+    @State private var openedCalendarEvent: CalendarEvent?
+    @State private var now = Date()
+
     private let calendar = Calendar.current
-    
-    /// Get people with birthdays on the selected date
-    private var birthdaysOnSelectedDate: [Person] {
-        let day = calendar.component(.day, from: selectedDate)
-        let month = calendar.component(.month, from: selectedDate)
-        
-        return peopleManager.people.filter { person in
-            guard let birthdayStr = person.birthday else { return false }
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd"
-            guard let birthdayDate = formatter.date(from: birthdayStr) else { return false }
-            
-            let birthdayDay = calendar.component(.day, from: birthdayDate)
-            let birthdayMonth = calendar.component(.month, from: birthdayDate)
-            
-            return birthdayDay == day && birthdayMonth == month
-        }
-    }
-    
-    /// Get events on the selected date
-    private var eventsOnSelectedDate: [Event] {
-        eventManager.getEventsForDate(selectedDate)
-    }
-    
-    /// Check if there's a birthday on a given date
-    private func hasBirthdayOnDate(_ date: Date) -> Bool {
-        let day = calendar.component(.day, from: date)
-        let month = calendar.component(.month, from: date)
-        
-        return peopleManager.people.contains { person in
-            guard let birthdayStr = person.birthday else { return false }
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd"
-            guard let birthdayDate = formatter.date(from: birthdayStr) else { return false }
-            
-            let birthdayDay = calendar.component(.day, from: birthdayDate)
-            let birthdayMonth = calendar.component(.month, from: birthdayDate)
-            
-            return birthdayDay == day && birthdayMonth == month
-        }
-    }
-    
-    /// Check if there's an event on a given date
-    private func hasEventOnDate(_ date: Date) -> Bool {
-        eventManager.hasEventOnDate(date)
-    }
-    
+    private let minuteTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
+
     var body: some View {
         NavigationStack {
-            ZStack {
-                // Background
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(hex: "1a1a2e"),
-                        Color(hex: "16213e"),
-                        Color(hex: "0f0f23")
-                    ]),
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
-                
-                VStack(spacing: 0) {
-                    // Header
-                    headerView
-                    
-                    // Week selector (swipeable)
-                    weekSelectorView
-                    
-                    // Tasks list with swipe gesture
-                    if taskManager.isLoading {
-                        Spacer()
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        Spacer()
-                    } else {
-                        tasksListView
-                    }
+            List {
+                switch mode {
+                case .week: weekContent
+                case .day: dayContent
                 }
             }
-            .navigationBarHidden(true)
+            .listStyle(.insetGrouped)
+            .listSectionSpacing(.compact)
+            .scrollContentBackground(.hidden)
+            .background(NativePalette.background.ignoresSafeArea())
+            .contentMargins(.bottom, 100, for: .scrollContent)
+            .refreshable { await refreshData() }
+            .navigationTitle(mode == .week ? weekTitle : dayTitle(selectedDate))
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar { toolbarContent }
+            .navigationDestination(item: $openedTask) { task in
+                TaskDetailView(task: task)
+            }
+            .sheet(isPresented: $showingAddTask) {
+                NewTaskSheet(defaultDate: mode == .day ? selectedDate : Date())
+                    .environmentObject(taskManager)
+            }
+            .sheet(item: $openedCalendarEvent) { event in
+                GoogleEventSheet(event: event)
+                    .presentationDetents([.medium])
+            }
             .onAppear {
-                Task {
-                    await taskManager.fetchTasks()
+                Task { await taskManager.fetchTasks() }
+            }
+            .onReceive(minuteTimer) { now = $0 }
+            .task(id: weekStart) {
+                if Config.isGoogleCalendarEnabled, let last = weekDays.last {
+                    await calendarManager.fetch(from: weekStart, to: last)
                 }
             }
         }
+        .tint(NativePalette.accent)
     }
-    
-    // MARK: - Delete Task
-    
+
+    // MARK: - Toolbar
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItemGroup(placement: .topBarTrailing) {
+            switch mode {
+            case .week:
+                Button(L10n.today) { openDay(Date()) }
+                    .fontWeight(.semibold)
+            case .day:
+                if !calendar.isDateInToday(selectedDate) {
+                    Button(L10n.today) { openDay(Date()) }
+                        .fontWeight(.semibold)
+                }
+                Button(l10n.weekView) {
+                    withAnimation { mode = .week }
+                }
+                .fontWeight(.semibold)
+            }
+
+            Button {
+                showingAddTask = true
+            } label: {
+                Image(systemName: "plus")
+            }
+            .accessibilityLabel(l10n.newTask)
+        }
+    }
+
+    // MARK: - Week (4a / 4b)
+
+    @ViewBuilder
+    private var weekContent: some View {
+        Section {
+            headerSubtitle(weekRangeText)
+        }
+        .listRowBackground(Color.clear)
+
+        ForEach(weekDays, id: \.self) { day in
+            let items = agendaItems(for: day)
+            let tasks = items.filter { $0.kind == .task }
+
+            Section {
+                if items.isEmpty {
+                    Text(L10n.noTasksTitle)
+                        .font(.system(size: 15))
+                        .foregroundStyle(NativePalette.faint)
+                        .padding(.vertical, 4)
+                } else {
+                    ForEach(items) { item in
+                        agendaRow(item)
+                    }
+                }
+            } header: {
+                Button {
+                    openDay(day)
+                } label: {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(dayTitle(day))
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundStyle(calendar.isDateInToday(day) ? NativePalette.accent : NativePalette.ink)
+                        Text(format(day, template: "MMMMd"))
+                            .font(.system(size: 17))
+                            .foregroundStyle(NativePalette.muted)
+                        Spacer()
+                        if !tasks.isEmpty {
+                            Text("\(tasks.filter(\.isDone).count)/\(tasks.count)")
+                                .font(.system(size: 15))
+                                .foregroundStyle(NativePalette.muted)
+                                .monospacedDigit()
+                        }
+                    }
+                    .textCase(nil)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    // MARK: - Day (4c / 4d)
+
+    @ViewBuilder
+    private var dayContent: some View {
+        let items = agendaItems(for: selectedDate)
+        let focus = DayFocus(items: items, isToday: calendar.isDateInToday(selectedDate), now: now, calendar: calendar)
+
+        Section {
+            headerSubtitle(format(selectedDate, template: "EEEEMMMMd"))
+            dayStrip
+        }
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+
+        if items.isEmpty {
+            Section {
+                VStack(spacing: 4) {
+                    Text(L10n.noTasksTitle)
+                        .font(.system(size: 20, weight: .semibold))
+                    Text(L10n.noTasksSubtitle)
+                        .font(.system(size: 15))
+                        .foregroundStyle(NativePalette.muted)
+                }
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 32)
+            }
+            .listRowBackground(Color.clear)
+        }
+
+        if let hero = focus.hero {
+            Section {
+                heroCard(hero, startsIn: focus.heroBadge(l10n: l10n))
+                    .listRowInsets(EdgeInsets())
+            }
+            .listRowBackground(Color.clear)
+        }
+
+        if !focus.taskSegments.isEmpty {
+            Section {
+                progressBar(focus.taskSegments)
+            }
+            .listRowBackground(Color.clear)
+        }
+
+        if !focus.later.isEmpty {
+            Section(calendar.isDateInToday(selectedDate) ? l10n.laterToday : l10n.later) {
+                ForEach(focus.later) { agendaRow($0) }
+            }
+        }
+
+        if !focus.anytime.isEmpty {
+            Section(l10n.anytime) {
+                ForEach(focus.anytime) { agendaRow($0) }
+            }
+        }
+
+        if !focus.done.isEmpty {
+            Section {
+                if showDone {
+                    ForEach(focus.done) { agendaRow($0) }
+                }
+            } header: {
+                Button {
+                    withAnimation { showDone.toggle() }
+                } label: {
+                    HStack {
+                        Text("\(l10n.completedSection) · \(focus.done.count)")
+                        Spacer()
+                        Image(systemName: showDone ? "chevron.up" : "chevron.down")
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private var dayStrip: some View {
+        HStack(spacing: 0) {
+            ForEach(weekDays, id: \.self) { day in
+                let isSelected = calendar.isDate(day, inSameDayAs: selectedDate)
+                let isToday = calendar.isDateInToday(day)
+                let marks = dayMarks(day)
+
+                Button {
+                    withAnimation(.snappy) { selectedDate = day }
+                } label: {
+                    VStack(spacing: 6) {
+                        Text(weekdayLetter(day))
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(NativePalette.muted)
+                        Text(format(day, template: "d"))
+                            .font(.system(size: 20, weight: isSelected || isToday ? .semibold : .regular))
+                            .foregroundStyle(isSelected ? Color(uiColor: .systemBackground) : (isToday ? NativePalette.accent : NativePalette.ink))
+                            .frame(width: 42, height: 42)
+                            .background(Circle().fill(isSelected ? NativePalette.accent : .clear))
+                        HStack(spacing: 3) {
+                            if marks.hasItems {
+                                Circle().fill(NativePalette.faint).frame(width: 5, height: 5)
+                            }
+                            if marks.hasOccasion {
+                                Circle().fill(NativePalette.occasion).frame(width: 5, height: 5)
+                            }
+                        }
+                        .frame(height: 5)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.vertical, 4)
+        .gesture(
+            DragGesture(minimumDistance: 30)
+                .onEnded { value in
+                    guard abs(value.translation.width) > abs(value.translation.height) else { return }
+                    // Swipe toward the trailing edge goes back a week (mirrored in RTL).
+                    var forward = value.translation.width < 0
+                    if l10n.currentLanguage.isRTL { forward.toggle() }
+                    shiftWeek(by: forward ? 7 : -7)
+                }
+        )
+    }
+
+    private func heroCard(_ hero: AgendaItem, startsIn: String) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text(l10n.upNext)
+                    .font(.system(size: 13, weight: .semibold))
+                    .textCase(.uppercase)
+                    .foregroundStyle(NativePalette.accent)
+                Spacer()
+                Text(startsIn)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(NativePalette.accent)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(NativePalette.accentSoft, in: Capsule())
+            }
+
+            Text(hero.title)
+                .font(.system(size: 28, weight: .bold))
+                .foregroundStyle(NativePalette.ink)
+                .padding(.top, 16)
+
+            Text([hero.timeRange, hero.meta].filter { !$0.isEmpty }.joined(separator: " · "))
+                .font(.system(size: 17))
+                .foregroundStyle(NativePalette.muted)
+                .padding(.top, 4)
+
+            Button {
+                if let task = hero.task { setStatus(task, done: true) }
+            } label: {
+                Label(l10n.markDone, systemImage: "checkmark")
+                    .font(.system(size: 17, weight: .semibold))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .foregroundStyle(NativePalette.accent)
+                    .background(NativePalette.accentSoft, in: Capsule())
+            }
+            .buttonStyle(.borderless)
+            .padding(.top, 20)
+        }
+        .padding(22)
+        .background(NativePalette.surface, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .strokeBorder(NativePalette.accentSoft, lineWidth: 1)
+        )
+        .contentShape(Rectangle())
+        .onTapGesture { openedTask = hero.task }
+    }
+
+    private func progressBar(_ segments: [Bool]) -> some View {
+        HStack(spacing: 6) {
+            ForEach(Array(segments.enumerated()), id: \.offset) { _, isDone in
+                Capsule()
+                    .fill(isDone ? NativePalette.done : NativePalette.segment)
+                    .frame(height: 4)
+            }
+            Text(l10n.progress(done: segments.filter { $0 }.count, total: segments.count))
+                .font(.system(size: 13))
+                .foregroundStyle(NativePalette.muted)
+                .fixedSize()
+                .padding(.leading, 6)
+        }
+    }
+
+    // MARK: - Shared rows
+
+    private func headerSubtitle(_ text: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if !networkMonitor.isConnected {
+                Label(L10n.offlineMode, systemImage: "wifi.slash")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(NativePalette.medium)
+            }
+            if Config.isGoogleCalendarEnabled && calendarManager.needsReconnect {
+                Button {
+                    Task {
+                        if await AuthManager.shared.connectGoogleCalendar(), let last = weekDays.last {
+                            await calendarManager.fetch(from: weekStart, to: last)
+                        }
+                    }
+                } label: {
+                    Label(l10n.reconnectGoogleCalendar, systemImage: "exclamationmark.arrow.triangle.2.circlepath")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(NativePalette.googleEvent)
+                }
+                .buttonStyle(.borderless)
+            }
+            Text(text)
+                .font(.system(size: 15))
+                .foregroundStyle(NativePalette.muted)
+        }
+        .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
+    }
+
+    @ViewBuilder
+    private func agendaRow(_ item: AgendaItem) -> some View {
+        AgendaRowView(item: item) {
+            if let task = item.task { setStatus(task, done: !item.isDone) }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if let task = item.task { openedTask = task }
+            if let event = item.calendarEvent { openedCalendarEvent = event }
+        }
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            if let task = item.task {
+                Button(role: .destructive) {
+                    deleteTask(task)
+                } label: {
+                    Label(l10n.delete, systemImage: "trash")
+                }
+            }
+        }
+        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+            if let task = item.task {
+                Button {
+                    setStatus(task, done: !item.isDone)
+                } label: {
+                    Label(item.isDone ? l10n.undone : l10n.markDone,
+                          systemImage: item.isDone ? "arrow.uturn.backward" : "checkmark")
+                }
+                .tint(item.isDone ? .orange : NativePalette.done)
+            }
+        }
+    }
+
+    // MARK: - Actions
+
+    private func openDay(_ date: Date) {
+        let day = calendar.startOfDay(for: date)
+        withAnimation {
+            selectedDate = day
+            if !weekDays.contains(day) || calendar.isDateInToday(day) {
+                weekStart = day
+            }
+            mode = .day
+        }
+    }
+
+    private func shiftWeek(by days: Int) {
+        guard let start = calendar.date(byAdding: .day, value: days, to: weekStart),
+              let selected = calendar.date(byAdding: .day, value: days, to: selectedDate) else { return }
+        withAnimation(.snappy) {
+            weekStart = start
+            selectedDate = selected
+        }
+    }
+
+    private func setStatus(_ task: TaskItem, done: Bool) {
+        Task {
+            _ = try? await taskManager.updateTask(id: task.id, input: UpdateTaskInput(status: done ? .done : .todo))
+        }
+    }
+
     private func deleteTask(_ task: TaskItem) {
         Task {
             do {
@@ -110,730 +517,464 @@ struct TasksView: View {
             }
         }
     }
-    
-    // MARK: - Header
-    
-    private var headerView: some View {
-        VStack(spacing: 8) {
-            // Offline indicator - only show when truly no network
-            if !networkMonitor.isConnected {
-                HStack(spacing: 6) {
-                    Image(systemName: "wifi.slash")
-                        .font(.system(size: 12))
-                    Text(L10n.offlineMode)
-                        .font(.system(size: 12))
-                }
-                .foregroundColor(Color(hex: "f59e0b"))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Color(hex: "f59e0b").opacity(0.15))
-                .cornerRadius(8)
-            }
-            
-            HStack {
-                // Previous day button
-                Button(action: {
-                    withAnimation {
-                        selectedDate = calendar.date(byAdding: .day, value: -1, to: selectedDate) ?? selectedDate
-                    }
-                }) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(Color(hex: "a78bfa"))
-                }
-                
-                Spacer()
-                
-                VStack(alignment: .center, spacing: 4) {
-                    Text(formattedDayName)
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(.white)
-                    Text(formattedFullDate)
-                        .font(.system(size: 14))
-                        .foregroundColor(Color(hex: "94a3b8"))
-                    
-                    // Last sync indicator
-                    if let lastSync = taskManager.lastSyncDate {
-                        Text("\(L10n.updated): \(formatLastSync(lastSync))")
-                            .font(.system(size: 10))
-                            .foregroundColor(Color(hex: "64748b"))
-                    }
-                }
-                
-                Spacer()
-                
-                // Next day button
-                Button(action: {
-                    withAnimation {
-                        selectedDate = calendar.date(byAdding: .day, value: 1, to: selectedDate) ?? selectedDate
-                    }
-                }) {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(Color(hex: "a78bfa"))
-                }
-            }
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, 16)
-        .padding(.bottom, 12)
-        .overlay(alignment: .topTrailing) {
-            HStack(spacing: 8) {
-                // Refresh button
-                Button(action: {
-                    Task {
-                        await refreshData()
-                    }
-                }) {
-                    Image(systemName: taskManager.isLoading ? "arrow.clockwise" : "arrow.clockwise")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(Color(hex: "a78bfa"))
-                        .rotationEffect(.degrees(taskManager.isLoading ? 360 : 0))
-                        .animation(taskManager.isLoading ? .linear(duration: 1).repeatForever(autoreverses: false) : .default, value: taskManager.isLoading)
-                }
-                .disabled(taskManager.isLoading)
-                
-                // Today button
-                if !calendar.isDateInToday(selectedDate) {
-                    Button(action: { 
-                        withAnimation {
-                            selectedDate = Date()
-                        }
-                    }) {
-                        Text(L10n.today)
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(Color(hex: "a78bfa"))
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(Color(hex: "a78bfa").opacity(0.2))
-                            .cornerRadius(6)
-                    }
-                }
-            }
-            .padding(.top, 12)
-            .padding(.trailing, 20)
-        }
-    }
-    
-    private func formatLastSync(_ date: Date) -> String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.locale = Locale(identifier: "he")
-        formatter.unitsStyle = .abbreviated
-        return formatter.localizedString(for: date, relativeTo: Date())
-    }
-    
-    private var formattedDayName: String {
-        if calendar.isDateInToday(selectedDate) {
-            return L10n.today
-        } else if calendar.isDateInYesterday(selectedDate) {
-            return L10n.yesterday
-        } else if calendar.isDateInTomorrow(selectedDate) {
-            return L10n.tomorrow
-        } else {
-            let formatter = DateFormatter()
-            formatter.locale = Locale(identifier: "he")
-            formatter.dateFormat = "EEEE"
-            return formatter.string(from: selectedDate)
-        }
-    }
-    
-    private var formattedFullDate: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "d MMMM yyyy"
-        return formatter.string(from: selectedDate)
-    }
-    
-    // MARK: - Week Selector (Infinite Scroll)
-    
-    private var weekSelectorView: some View {
-        // Show 3 weeks: previous, current, next (centered on selected date)
-        let allDays = getExtendedDays(for: selectedDate, range: 21) // 3 weeks
-        
-        return ScrollViewReader { proxy in
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(allDays, id: \.self) { date in
-                        DayButton(
-                            date: date,
-                            isSelected: calendar.isDate(date, inSameDayAs: selectedDate),
-                            hasTask: hasTasksOnDate(date),
-                            hasBirthday: hasBirthdayOnDate(date),
-                            hasEvent: hasEventOnDate(date)
-                        ) {
-                            withAnimation {
-                                selectedDate = date
-                            }
-                        }
-                        .id(date)
-                    }
-                }
-                .padding(.horizontal, 20)
-            }
-            .onAppear {
-                // Scroll to selected date
-                proxy.scrollTo(selectedDate, anchor: .center)
-            }
-            .onChange(of: selectedDate) { _, newDate in
-                withAnimation {
-                    proxy.scrollTo(newDate, anchor: .center)
-                }
-            }
-        }
-        .padding(.bottom, 16)
-    }
-    
-    private func getExtendedDays(for date: Date, range: Int) -> [Date] {
-        var days: [Date] = []
-        let halfRange = range / 2
-        
-        for i in -halfRange...halfRange {
-            if let day = calendar.date(byAdding: .day, value: i, to: date) {
-                days.append(day)
-            }
-        }
-        return days
-    }
-    
-    // MARK: - Tasks List (with Pull-to-Refresh)
-    
-    private var tasksListView: some View {
-        let allItems = getTasksForSelectedDate()
-        let reminders = allItems.filter { $0.taskType == .reminder }
-        let tasks = allItems.filter { $0.taskType == .task }
-        
-        return List {
-            // Pull to refresh hint
-            if taskManager.isLoading {
-                HStack(spacing: 8) {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: Color(hex: "a78bfa")))
-                    Text(L10n.refreshing)
-                        .font(.system(size: 14))
-                        .foregroundColor(Color(hex: "94a3b8"))
-                }
-                .padding(.vertical, 8)
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-            }
-            
-            // 🔔 Reminders Section (first, different style)
-            ForEach(reminders, id: \.id) { reminder in
-                NavigationLink(destination: TaskDetailView(task: reminder)) {
-                    ReminderRowView(reminder: reminder)
-                }
-                .buttonStyle(PlainButtonStyle())
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    Button(role: .destructive) {
-                        deleteTask(reminder)
-                    } label: {
-                        Label(L10n.shared.delete, systemImage: "trash")
-                    }
-                }
-            }
-            
-            // 🎉 Events Section (anniversaries, etc.)
-            ForEach(eventsOnSelectedDate, id: \.id) { event in
-                EventRowView(event: event)
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
-            }
-            
-            // 🎂 Birthdays Section
-            ForEach(birthdaysOnSelectedDate, id: \.id) { person in
-                BirthdayRowView(person: person)
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
-            }
-            
-            if tasks.isEmpty && reminders.isEmpty && birthdaysOnSelectedDate.isEmpty && eventsOnSelectedDate.isEmpty {
-                emptyStateView
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-            } else {
-                // Regular tasks (after reminders, events, birthdays)
-                ForEach(tasks, id: \.id) { task in
-                    NavigationLink(destination: TaskDetailView(task: task)) {
-                        TaskRowView(task: task)
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
-                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) {
-                            deleteTask(task)
-                        } label: {
-                            Label(L10n.shared.delete, systemImage: "trash")
-                        }
-                    }
-                    .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                        Button {
-                            toggleTaskStatus(task)
-                        } label: {
-                            Label(task.status == .done ? L10n.shared.undone : L10n.shared.done, systemImage: task.status == .done ? "arrow.uturn.backward" : "checkmark")
-                        }
-                        .tint(task.status == .done ? .orange : .green)
-                    }
-                }
-            }
-        }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .refreshable {
-            // Pull-to-refresh action
-            await refreshData()
-        }
-    }
-    
-    // MARK: - Refresh Data
-    
+
     private func refreshData() async {
-        print("🔄 Pull to refresh triggered")
         await taskManager.fetchTasks()
         await taskManager.fetchCategories()
-        await PeopleManager.shared.fetchPeople()
+        await peopleManager.fetchPeople()
         await eventManager.fetchEvents()
-        print("✅ Refresh complete")
+        if Config.isGoogleCalendarEnabled, let last = weekDays.last { await calendarManager.fetch(from: weekStart, to: last) }
     }
-    
-    private var emptyStateView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "checkmark.circle")
-                .font(.system(size: 50))
-                .foregroundColor(Color(hex: "475569"))
-            
-            Text(L10n.noTasksTitle)
-                .font(.system(size: 18, weight: .medium))
-                .foregroundColor(Color(hex: "64748b"))
-            
-            Text(L10n.noTasksSubtitle)
-                .font(.system(size: 14))
-                .foregroundColor(Color(hex: "475569"))
+
+    // MARK: - Data
+
+    private var weekDays: [Date] {
+        (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: weekStart) }
+    }
+
+    /// Reminders first, then birthdays and events, then tasks by time (untimed last).
+    private func agendaItems(for date: Date) -> [AgendaItem] {
+        let dateString = Self.isoDay.string(from: date)
+        let dayTasks = taskManager.tasks.filter {
+            $0.date == dateString && $0.taskType != .idea && $0.taskType != .social
         }
-        .padding(.top, 60)
-    }
-    
-    // MARK: - Helpers
-    
-    private func getWeekDays(for date: Date) -> [Date] {
-        var days: [Date] = []
-        let startOfWeek = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: date))!
-        
-        for i in 0..<7 {
-            if let day = calendar.date(byAdding: .day, value: i, to: startOfWeek) {
-                days.append(day)
+
+        let byTime: (TaskItem, TaskItem) -> Bool = { a, b in
+            switch (a.startTime, b.startTime) {
+            case let (x?, y?): return x < y
+            case (_?, nil): return true
+            default: return false
             }
         }
-        return days
-    }
-    
-    private func hasTasksOnDate(_ date: Date) -> Bool {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        let dateStr = formatter.string(from: date)
-        
-        return taskManager.tasks.contains { $0.date == dateStr && $0.taskType != .idea }
-    }
-    
-    private func getTasksForSelectedDate() -> [TaskItem] {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        let dateStr = formatter.string(from: selectedDate)
-        
-        return taskManager.tasks
-            .filter { $0.date == dateStr && $0.taskType != .idea }
-            .sorted { ($0.startTime ?? "") < ($1.startTime ?? "") }
-    }
-    
-    private func toggleTaskStatus(_ task: TaskItem) {
-        Task {
-            let newStatus: TaskStatus = task.status == .done ? .todo : .done
-            let input = UpdateTaskInput(status: newStatus)
-            try? await taskManager.updateTask(id: task.id, input: input)
-        }
-    }
-}
 
-// MARK: - Day Button
-
-struct DayButton: View {
-    let date: Date
-    let isSelected: Bool
-    let hasTask: Bool
-    let hasBirthday: Bool
-    let hasEvent: Bool
-    let action: () -> Void
-    
-    private let calendar = Calendar.current
-    
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 4) {
-                Text(dayName)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(isSelected ? .white : Color(hex: "64748b"))
-                
-                ZStack {
-                    Text(dayNumber)
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(isSelected ? .white : Color(hex: "94a3b8"))
-                    
-                    // Birthday indicator (cake emoji on top-right)
-                    if hasBirthday {
-                        Text("🎂")
-                            .font(.system(size: 10))
-                            .offset(x: 12, y: -8)
-                    }
-                    // Event indicator (if no birthday)
-                    else if hasEvent {
-                        Text("💍")
-                            .font(.system(size: 10))
-                            .offset(x: 12, y: -8)
-                    }
-                }
-                
-                // Dots for task, birthday, event
-                HStack(spacing: 2) {
-                    if hasTask {
-                        Circle()
-                            .fill(isSelected ? Color.white : Color(hex: "a78bfa"))
-                            .frame(width: 4, height: 4)
-                    }
-                    if hasBirthday {
-                        Circle()
-                            .fill(isSelected ? Color.white : Color(hex: "f472b6"))
-                            .frame(width: 4, height: 4)
-                    }
-                    if hasEvent && !hasBirthday {
-                        Circle()
-                            .fill(isSelected ? Color.white : Color(hex: "fbbf24"))
-                            .frame(width: 4, height: 4)
-                    }
-                }
-                .frame(height: 6)
-            }
-            .frame(width: 44, height: 70)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(isSelected ? Color(hex: "7c3aed") : Color.white.opacity(0.05))
+        let reminders = dayTasks.filter { $0.taskType == .reminder }.sorted(by: byTime).map { task in
+            AgendaItem(
+                id: task.id, kind: .reminder, title: task.title,
+                meta: L10n.reminder, metaColor: NativePalette.reminder,
+                startTime: Self.shortTime(task.startTime), endTime: Self.shortTime(task.endTime),
+                isDone: task.status == .done, isRecurring: task.isRecurring || task.parentTaskId != nil,
+                eventType: nil, task: task
             )
         }
+
+        let tasks = dayTasks.filter { $0.taskType == .task }.sorted(by: byTime).map { task in
+            AgendaItem(
+                id: task.id, kind: .task, title: task.title,
+                meta: l10n.priorityName(task.priority), metaColor: NativePalette.priority(task.priority),
+                startTime: Self.shortTime(task.startTime), endTime: Self.shortTime(task.endTime),
+                isDone: task.status == .done, isRecurring: task.isRecurring || task.parentTaskId != nil,
+                eventType: nil, task: task
+            )
+        }
+
+        let year = calendar.component(.year, from: date)
+
+        let events = eventManager.getEventsForDate(date).map { event in
+            var meta = event.eventType.displayName
+            if let since = event.year, year - since > 0 {
+                meta += " · \(l10n.yearsCount(year - since))"
+            }
+            return AgendaItem(
+                id: "event-\(event.id)", kind: .event, title: event.name,
+                meta: meta, metaColor: NativePalette.occasion,
+                startTime: nil, endTime: nil, isDone: false, isRecurring: false,
+                eventType: event.eventType, task: nil
+            )
+        }
+
+        let birthdays = birthdayPeople(on: date).map { person in
+            var parts: [String] = []
+            if let relation = person.relationshipDetail ?? relationshipLabel(person.relationshipType) {
+                parts.append(relation)
+            }
+            if let birthday = person.birthday.flatMap(Self.isoDay.date(from:)) {
+                let turning = year - calendar.component(.year, from: birthday)
+                if turning > 0 { parts.append(l10n.turning(turning)) }
+            }
+            return AgendaItem(
+                id: "birthday-\(person.id)", kind: .birthday, title: l10n.birthdayTitle(person.fullName),
+                meta: parts.joined(separator: " · "), metaColor: NativePalette.occasion,
+                startTime: nil, endTime: nil, isDone: false, isRecurring: false,
+                eventType: nil, task: nil
+            )
+        }
+
+        let googleEvents = calendarManager.events(on: date).map { event in
+            AgendaItem(
+                id: "gcal-\(event.id)", kind: .calendar, title: event.title,
+                meta: event.location ?? l10n.googleCalendar, metaColor: NativePalette.googleEvent,
+                startTime: event.startTime, endTime: event.endTime,
+                isDone: false, isRecurring: false, eventType: nil, task: nil,
+                calendarEvent: event
+            )
+        }
+        let timedGoogle = googleEvents.filter(\.hasTime)
+        let allDayGoogle = googleEvents.filter { !$0.hasTime }
+
+        // Timed Google events merge into the time-ordered task list; all-day ones sit with occasions.
+        let timed = (tasks + timedGoogle).sorted { ($0.startMinutes ?? Int.max) < ($1.startMinutes ?? Int.max) }
+        return reminders + birthdays + events + allDayGoogle + timed
     }
-    
-    private var dayName: String {
-        let isHebrew = L10n.shared.currentLanguage == .hebrew
-        let dayOfWeek = calendar.component(.weekday, from: date)
-        
-        if isHebrew {
-            // Hebrew single letters: א ב ג ד ה ו ש
-            let hebrewDays = ["", "א", "ב", "ג", "ד", "ה", "ו", "ש"]
-            return hebrewDays[dayOfWeek]
-        } else {
-            // English single letters: S M T W T F S
-            let englishDays = ["", "S", "M", "T", "W", "T", "F", "S"]
-            return englishDays[dayOfWeek]
+
+    private func birthdayPeople(on date: Date) -> [Person] {
+        let target = calendar.dateComponents([.day, .month], from: date)
+        return peopleManager.people.filter { person in
+            guard let birthday = person.birthday.flatMap(Self.isoDay.date(from:)) else { return false }
+            let parts = calendar.dateComponents([.day, .month], from: birthday)
+            return parts.day == target.day && parts.month == target.month
         }
     }
-    
-    private var dayNumber: String {
+
+    private func dayMarks(_ date: Date) -> (hasItems: Bool, hasOccasion: Bool) {
+        let dateString = Self.isoDay.string(from: date)
+        let hasItems = taskManager.tasks.contains {
+            $0.date == dateString && $0.taskType != .idea && $0.taskType != .social
+        }
+        let hasOccasion = eventManager.hasEventOnDate(date) || !birthdayPeople(on: date).isEmpty
+        return (hasItems, hasOccasion)
+    }
+
+    private func relationshipLabel(_ type: RelationshipType) -> String? {
+        let he = l10n.currentLanguage == .hebrew
+        switch type {
+        case .family: return he ? "משפחה" : "Family"
+        case .friend: return he ? "חבר" : "Friend"
+        case .colleague: return he ? "עמית" : "Colleague"
+        case .other: return nil
+        }
+    }
+
+    // MARK: - Formatting
+
+    private var weekTitle: String {
+        weekDays.contains { calendar.isDateInToday($0) } ? l10n.thisWeek : l10n.weekView
+    }
+
+    private var weekRangeText: String {
+        guard let last = weekDays.last else { return "" }
+        let formatter = DateIntervalFormatter()
+        formatter.locale = l10n.locale
+        formatter.dateTemplate = "MMMMdyyyy"
+        return formatter.string(from: weekStart, to: last)
+    }
+
+    private func dayTitle(_ date: Date) -> String {
+        if calendar.isDateInToday(date) { return L10n.today }
+        if calendar.isDateInTomorrow(date) { return L10n.tomorrow }
+        if calendar.isDateInYesterday(date) { return L10n.yesterday }
+        return format(date, template: "EEEE")
+    }
+
+    private func format(_ date: Date, template: String) -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "d"
+        formatter.locale = l10n.locale
+        formatter.setLocalizedDateFormatFromTemplate(template)
         return formatter.string(from: date)
     }
+
+    private func weekdayLetter(_ date: Date) -> String {
+        let weekday = calendar.component(.weekday, from: date)
+        let letters = l10n.currentLanguage == .hebrew
+            ? ["א", "ב", "ג", "ד", "ה", "ו", "ש"]
+            : ["S", "M", "T", "W", "T", "F", "S"]
+        return letters[weekday - 1]
+    }
+
+    static let isoDay: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
+
+    /// "HH:MM:SS" → "HH:MM"
+    static func shortTime(_ time: String?) -> String? {
+        guard let time, !time.isEmpty else { return nil }
+        let parts = time.split(separator: ":")
+        return parts.count >= 2 ? "\(parts[0]):\(parts[1])" : time
+    }
 }
 
-// MARK: - Task Row View
+// MARK: - Day Focus
 
-struct TaskRowView: View {
-    let task: TaskItem
-    
+/// Splits a day's items the way the "Up next" design does: one hero item,
+/// timed items later in the day, untimed items and occasions, and done items.
+private struct DayFocus {
+    let hero: AgendaItem?
+    let later: [AgendaItem]
+    let anytime: [AgendaItem]
+    let done: [AgendaItem]
+    let taskSegments: [Bool]
+    private let minutesUntilHero: Int?
+
+    init(items: [AgendaItem], isToday: Bool, now: Date, calendar: Calendar) {
+        let nowMinutes = calendar.component(.hour, from: now) * 60 + calendar.component(.minute, from: now)
+        let open = items.filter { !$0.isDone && !$0.isOccasion && $0.kind != .calendar }
+        let timedOpen = open.filter(\.hasTime)
+
+        // Today: the first timed item that hasn't started more than 15 min ago.
+        var hero = isToday
+            ? timedOpen.first { ($0.startMinutes ?? 0) >= nowMinutes - 15 }
+            : timedOpen.first
+        if hero == nil { hero = open.first }
+        self.hero = hero
+
+        if isToday, let start = hero?.startMinutes {
+            minutesUntilHero = start - nowMinutes
+        } else {
+            minutesUntilHero = nil
+        }
+
+        let rest = items.filter { !$0.isDone && $0.id != hero?.id }
+        later = rest.filter { $0.hasTime && !$0.isOccasion }
+        anytime = rest.filter { !$0.hasTime || $0.isOccasion }
+        done = items.filter(\.isDone)
+        taskSegments = items.filter { $0.kind == .task }.map(\.isDone)
+    }
+
+    func heroBadge(l10n: L10n) -> String {
+        guard let hero else { return "" }
+        if let minutes = minutesUntilHero {
+            return minutes <= 0 ? l10n.now : l10n.startsIn(minutes: minutes)
+        }
+        return hero.startTime ?? l10n.anytime
+    }
+}
+
+// MARK: - Agenda Row
+
+struct AgendaRowView: View {
+    let item: AgendaItem
+    let onToggle: () -> Void
+
     var body: some View {
-        HStack(spacing: 12) {
-            // Status indicator (visual only - use swipe to toggle)
-            Image(systemName: task.status == .done ? "checkmark.circle.fill" : "circle")
-                .font(.system(size: 24))
-                .foregroundColor(task.status == .done ? Color(hex: "10b981") : Color(hex: "475569"))
-            
-            // Task info
-            VStack(alignment: .leading, spacing: 4) {
-                Text(task.title)
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(task.status == .done ? Color(hex: "64748b") : .white)
-                    .strikethrough(task.status == .done)
-                
-                HStack(spacing: 8) {
-                    if let startTime = task.startTime {
-                        HStack(spacing: 4) {
-                            Image(systemName: "clock")
-                                .font(.system(size: 12))
-                            // Format time to show only HH:MM (remove seconds)
-                            Text(formatTimeWithoutSeconds(startTime))
-                                .font(.system(size: 12))
-                        }
-                        .foregroundColor(Color(hex: "64748b"))
+        HStack(spacing: 14) {
+            leadingIcon
+                .frame(width: 28)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.title)
+                    .font(.system(size: 17))
+                    .strikethrough(item.isDone)
+                    .foregroundStyle(item.isDone ? NativePalette.faint : NativePalette.ink)
+                    .lineLimit(2)
+
+                HStack(spacing: 6) {
+                    if !item.meta.isEmpty {
+                        Text(item.meta)
+                            .font(.system(size: 15))
+                            .foregroundStyle(item.metaColor)
                     }
-                    
-                    // Recurring indicator
-                    if task.isRecurring || task.parentTaskId != nil {
+                    if item.isRecurring {
                         Image(systemName: "repeat")
-                            .font(.system(size: 10))
-                            .foregroundColor(Color(hex: "8b5cf6"))
-                    }
-                    
-                    priorityBadge
-                }
-            }
-            
-            Spacer()
-        }
-        .padding(16)
-        .background(Color.white.opacity(0.05))
-        .cornerRadius(12)
-    }
-    
-    private var priorityBadge: some View {
-        let color: Color = {
-            switch task.priority {
-            case .high: return Color(hex: "ef4444")
-            case .medium: return Color(hex: "f59e0b")
-            case .low: return Color(hex: "10b981")
-            }
-        }()
-        
-        return Text(task.priority.rawValue.capitalized)
-            .font(.system(size: 10, weight: .semibold))
-            .foregroundColor(color)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(color.opacity(0.2))
-            .cornerRadius(4)
-    }
-    
-    // MARK: - Helpers
-    
-    /// Formats time string from "HH:MM:SS" to "HH:MM"
-    private func formatTimeWithoutSeconds(_ time: String) -> String {
-        let components = time.split(separator: ":")
-        if components.count >= 2 {
-            return "\(components[0]):\(components[1])"
-        }
-        return time
-    }
-}
-
-// MARK: - Reminder Row View
-
-struct ReminderRowView: View {
-    let reminder: TaskItem
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            // Bell icon (same position as status button in TaskRowView)
-            ZStack {
-                Circle()
-                    .fill(Color(hex: "1a3a4a"))
-                    .frame(width: 44, height: 44)
-                
-                Image(systemName: "bell.fill")
-                    .font(.system(size: 20))
-                    .foregroundColor(Color(hex: "06b6d4"))
-            }
-            
-            // Reminder info (same alignment as TaskRowView)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(reminder.title)
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.white)
-                
-                HStack(spacing: 8) {
-                    if let startTime = reminder.startTime {
-                        HStack(spacing: 4) {
-                            Image(systemName: "clock")
-                                .font(.system(size: 12))
-                            Text(formatTimeWithoutSeconds(startTime))
-                                .font(.system(size: 12))
-                        }
-                        .foregroundColor(Color(hex: "06b6d4"))
-                    }
-                    
-                    // "תזכורת" badge
-                    Text(L10n.reminder)
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(Color(hex: "06b6d4"))
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color(hex: "06b6d4").opacity(0.2))
-                        .cornerRadius(4)
-                }
-            }
-            
-            Spacer()
-        }
-        .padding(16)
-        .background(Color(hex: "1a2634"))
-        .cornerRadius(12)
-    }
-    
-    /// Formats time string from "HH:MM:SS" to "HH:MM"
-    private func formatTimeWithoutSeconds(_ time: String) -> String {
-        let components = time.split(separator: ":")
-        if components.count >= 2 {
-            return "\(components[0]):\(components[1])"
-        }
-        return time
-    }
-}
-
-// MARK: - Birthday Row View
-
-struct BirthdayRowView: View {
-    let person: Person
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            // Birthday icon
-            ZStack {
-                Circle()
-                    .fill(Color(hex: "f472b6").opacity(0.2))
-                    .frame(width: 44, height: 44)
-                
-                Text("🎂")
-                    .font(.system(size: 22))
-            }
-            
-            // Person info
-            VStack(alignment: .leading, spacing: 4) {
-                Text(birthdayTitle)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
-                
-                HStack(spacing: 8) {
-                    if let relationship = person.relationshipDetail ?? relationshipTypeLabel {
-                        Text(relationship)
-                            .font(.system(size: 12))
-                            .foregroundColor(Color(hex: "f472b6"))
-                    }
-                    
-                    if let age = person.age {
-                        Text(L10n.shared.currentLanguage == .hebrew ? "מלאו \(age + 1)" : "Turning \(age + 1)")
-                            .font(.system(size: 12))
-                            .foregroundColor(Color(hex: "94a3b8"))
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(NativePalette.muted)
                     }
                 }
             }
-            
-            Spacer()
-            
-            // Celebration icon
-            Text("🎉")
+            .alignmentGuide(.listRowSeparatorLeading) { $0[.leading] }
+
+            Spacer(minLength: 8)
+
+            if let time = item.startTime {
+                Text(time)
+                    .font(.system(size: 17))
+                    .foregroundStyle(NativePalette.muted)
+                    .monospacedDigit()
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private var leadingIcon: some View {
+        switch item.kind {
+        case .task:
+            Button(action: onToggle) {
+                ZStack {
+                    if item.isDone {
+                        Circle().fill(NativePalette.done)
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(.white)
+                    } else {
+                        Circle().strokeBorder(NativePalette.faint, lineWidth: 1.5)
+                    }
+                }
+                .frame(width: 26, height: 26)
+            }
+            .buttonStyle(.borderless)
+        case .reminder:
+            Image(systemName: "bell.fill")
                 .font(.system(size: 20))
-        }
-        .padding(16)
-        .background(
-            LinearGradient(
-                colors: [Color(hex: "f472b6").opacity(0.15), Color(hex: "a855f7").opacity(0.1)],
-                startPoint: .leading,
-                endPoint: .trailing
-            )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color(hex: "f472b6").opacity(0.3), lineWidth: 1)
-        )
-        .cornerRadius(12)
-    }
-    
-    private var birthdayTitle: String {
-        let isHebrew = L10n.shared.currentLanguage == .hebrew
-        let name = person.fullName
-        return isHebrew ? "יום הולדת ל\(name)!" : "\(name)'s Birthday!"
-    }
-    
-    private var relationshipTypeLabel: String? {
-        switch person.relationshipType {
-        case .family:
-            return L10n.shared.currentLanguage == .hebrew ? "משפחה" : "Family"
-        case .friend:
-            return L10n.shared.currentLanguage == .hebrew ? "חבר" : "Friend"
-        case .colleague:
-            return L10n.shared.currentLanguage == .hebrew ? "עמית" : "Colleague"
-        case .other:
-            return nil
-        }
-    }
-}
-
-// MARK: - Event Row View
-
-struct EventRowView: View {
-    let event: Event
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            // Event icon
-            ZStack {
-                Circle()
-                    .fill(eventColor.opacity(0.2))
-                    .frame(width: 44, height: 44)
-                
-                Text(event.displayIcon)
-                    .font(.system(size: 22))
-            }
-            
-            // Event info
-            VStack(alignment: .leading, spacing: 4) {
-                Text(event.name)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
-                
-                HStack(spacing: 8) {
-                    Text(event.eventType.displayName)
-                        .font(.system(size: 12))
-                        .foregroundColor(eventColor)
-                    
-                    if let years = event.yearsSince, years > 0 {
-                        Text(L10n.shared.currentLanguage == .hebrew ? "\(years) שנים" : "\(years) years")
-                            .font(.system(size: 12))
-                            .foregroundColor(Color(hex: "94a3b8"))
-                    }
-                }
-            }
-            
-            Spacer()
-            
-            // Celebration icon
-            Text("🎊")
-                .font(.system(size: 20))
-        }
-        .padding(16)
-        .background(
-            LinearGradient(
-                colors: [eventColor.opacity(0.15), eventColor.opacity(0.05)],
-                startPoint: .leading,
-                endPoint: .trailing
-            )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(eventColor.opacity(0.3), lineWidth: 1)
-        )
-        .cornerRadius(12)
-    }
-    
-    private var eventColor: Color {
-        switch event.eventType {
+                .foregroundStyle(NativePalette.reminder)
         case .birthday:
-            return Color(hex: "f472b6")  // Pink
-        case .anniversary:
-            return Color(hex: "fbbf24")  // Gold/Yellow
-        case .custom:
-            return Color(hex: "60a5fa")  // Blue
+            Image(systemName: "birthday.cake.fill")
+                .font(.system(size: 20))
+                .foregroundStyle(NativePalette.occasion)
+        case .calendar:
+            Image(systemName: "calendar")
+                .font(.system(size: 20))
+                .foregroundStyle(NativePalette.googleEvent)
+        case .event:
+            Image(systemName: item.eventType == .anniversary ? "heart.fill" : "star.fill")
+                .font(.system(size: 20))
+                .foregroundStyle(NativePalette.occasion)
         }
+    }
+}
+
+// MARK: - New Task Sheet
+
+struct NewTaskSheet: View {
+    @EnvironmentObject var taskManager: TaskManager
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var l10n = L10n.shared
+
+    @State private var title = ""
+    @State private var date: Date
+    @State private var hasTime = false
+    @State private var time = Date()
+    @State private var priority: Priority = .medium
+    @State private var isReminder = false
+    @State private var isSaving = false
+    @State private var failed = false
+
+    init(defaultDate: Date) {
+        _date = State(initialValue: defaultDate)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField(l10n.titlePlaceholder, text: $title)
+                    Picker("", selection: $isReminder) {
+                        Text(l10n.taskLabel).tag(false)
+                        Text(L10n.reminder).tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                }
+
+                Section {
+                    DatePicker(l10n.dateLabel, selection: $date, displayedComponents: .date)
+                    Toggle(l10n.timeLabel, isOn: $hasTime.animation())
+                    if hasTime {
+                        DatePicker(l10n.timeLabel, selection: $time, displayedComponents: .hourAndMinute)
+                            .labelsHidden()
+                    }
+                }
+
+                if !isReminder {
+                    Section(l10n.priorityLabel) {
+                        Picker(l10n.priorityLabel, selection: $priority) {
+                            ForEach(Priority.allCases, id: \.self) { p in
+                                Text(l10n.priorityName(p)).tag(p)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                    }
+                }
+
+                if failed {
+                    Text(l10n.saveFailed)
+                        .foregroundStyle(NativePalette.high)
+                }
+            }
+            .navigationTitle(l10n.newTask)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(L10n.cancel) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(l10n.add) { save() }
+                        .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty || isSaving)
+                }
+            }
+        }
+        .tint(NativePalette.accent)
+        .environment(\.layoutDirection, l10n.currentLanguage.isRTL ? .rightToLeft : .leftToRight)
+    }
+
+    private func save() {
+        var input = CreateTaskInput(
+            title: title.trimmingCharacters(in: .whitespaces),
+            date: TasksView.isoDay.string(from: date)
+        )
+        if hasTime {
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.dateFormat = "HH:mm"
+            input.startTime = formatter.string(from: time)
+        }
+        input.taskType = isReminder ? .reminder : .task
+        input.priority = priority
+        input.userId = AuthManager.shared.currentUser?.id
+
+        isSaving = true
+        failed = false
+        Task {
+            do {
+                _ = try await taskManager.createTask(input)
+                dismiss()
+            } catch {
+                print("❌ Failed to create task: \(error)")
+                failed = true
+            }
+            isSaving = false
+        }
+    }
+}
+
+// MARK: - Hashable (for navigationDestination)
+
+extension TaskItem: Hashable {
+    static func == (lhs: TaskItem, rhs: TaskItem) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+}
+
+// MARK: - Google Event Sheet
+
+struct GoogleEventSheet: View {
+    let event: CalendarEvent
+    @ObservedObject private var l10n = L10n.shared
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label(l10n.googleCalendar, systemImage: "calendar")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(NativePalette.googleEvent)
+            Text(event.title)
+                .font(.system(size: 24, weight: .bold))
+            Text(timeText)
+                .font(.system(size: 17))
+                .foregroundStyle(NativePalette.muted)
+            if let location = event.location, !location.isEmpty {
+                Label(location, systemImage: "mappin.and.ellipse")
+                    .font(.system(size: 17))
+            }
+            Spacer()
+            if let link = event.link, let url = URL(string: link) {
+                Link(destination: url) {
+                    Text(l10n.openInGoogleCalendar)
+                        .font(.system(size: 17, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                        .background(NativePalette.googleEvent.opacity(0.15), in: Capsule())
+                }
+                .foregroundStyle(NativePalette.googleEvent)
+            }
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .environment(\.layoutDirection, l10n.currentLanguage.isRTL ? .rightToLeft : .leftToRight)
+    }
+
+    private var timeText: String {
+        guard let start = event.startTime else { return l10n.allDay }
+        guard let end = event.endTime else { return start }
+        return "\(start) – \(end)"
     }
 }
 
@@ -843,4 +984,3 @@ struct EventRowView: View {
         .environmentObject(PeopleManager.shared)
         .environmentObject(EventManager.shared)
 }
-

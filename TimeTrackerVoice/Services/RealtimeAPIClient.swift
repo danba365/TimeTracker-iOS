@@ -43,24 +43,81 @@ class RealtimeAPIClient: NSObject, ObservableObject {
     
     func connect() {
         guard !isConnected else { return }
-        guard !Config.openAIAPIKey.isEmpty else {
-            onError?("OpenAI API key not set")
+        // Connection auth is resolved asynchronously (ephemeral token fetch),
+        // so kick off the work and let openConnection() open the socket.
+        Task { await self.openConnection() }
+    }
+
+    /// Resolve auth (preferring a short-lived ephemeral token from our backend)
+    /// and open the WebSocket. The standing OpenAI key is only used as a legacy
+    /// fallback when `functionsBaseURL` has not been configured.
+    @MainActor
+    private func openConnection() async {
+        guard !isConnected else { return }
+
+        var authToken: String?
+        if Config.usesEphemeralRealtimeToken {
+            authToken = await fetchEphemeralToken()
+            if authToken == nil {
+                onError?("Couldn't start the voice session. Check your connection and make sure you're signed in.")
+                return
+            }
+        } else if !Config.openAIAPIKey.isEmpty {
+            authToken = Config.openAIAPIKey // legacy fallback
+        } else {
+            onError?("Voice isn't configured yet. Set the backend URL (recommended) or an OpenAI API key.")
             return
         }
-        
-        let urlString = "\(Config.openAIRealtimeURL)?model=\(Config.openAIRealtimeModel)"
-        guard let url = URL(string: urlString) else { return }
-        
+
+        guard let token = authToken,
+              let url = URL(string: "\(Config.openAIRealtimeURL)?model=\(Config.openAIRealtimeModel)") else {
+            return
+        }
+
         var request = URLRequest(url: url)
         request.setValue("realtime", forHTTPHeaderField: "Sec-WebSocket-Protocol")
-        request.setValue("Bearer \(Config.openAIAPIKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("realtime=v1", forHTTPHeaderField: "OpenAI-Beta")
-        
+
         webSocket = urlSession.webSocketTask(with: request)
         webSocket?.resume()
-        
+
         print("🔌 Connecting to OpenAI Realtime API...")
         receiveMessage()
+    }
+
+    /// POST to our realtime-session function with the user's Supabase token and
+    /// return the ephemeral client secret used to authorize the WS connection.
+    private func fetchEphemeralToken() async -> String? {
+        guard let url = URL(string: Config.realtimeSessionURL) else { return nil }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let jwt = await AuthManager.shared.getAccessToken() {
+            request.setValue("Bearer \(jwt)", forHTTPHeaderField: "Authorization")
+        }
+        request.httpBody = try? JSONSerialization.data(withJSONObject: ["voice": "alloy"])
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+                let code = (response as? HTTPURLResponse)?.statusCode ?? -1
+                print("❌ realtime-session failed with status \(code)")
+                return nil
+            }
+            // Expected shape: { "client_secret": { "value": "ek_..." }, ... }
+            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let secret = json["client_secret"] as? [String: Any],
+               let value = secret["value"] as? String {
+                return value
+            }
+            print("❌ realtime-session: unexpected response shape")
+            return nil
+        } catch {
+            print("❌ realtime-session error: \(error)")
+            return nil
+        }
     }
     
     func disconnect() {

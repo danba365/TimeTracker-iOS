@@ -39,7 +39,7 @@ struct Person: Identifiable, Codable {
     
     // Helper to get full name
     var fullName: String {
-        if let last = lastName {
+        if let last = lastName, !last.isEmpty {
             return "\(firstName) \(last)"
         }
         return firstName
@@ -127,9 +127,11 @@ struct UpdatePersonInput: Codable {
     var email: String?
     var birthday: String?
     var notes: String?
-    
+    var mobile: String?
+    var anniversary: String?
+
     enum CodingKeys: String, CodingKey {
-        case nickname, phone, email, birthday, notes
+        case nickname, phone, email, birthday, notes, mobile, anniversary
         case firstName = "first_name"
         case lastName = "last_name"
         case relationshipType = "relationship_type"

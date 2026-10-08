@@ -14,7 +14,14 @@ enum TaskStatus: String, Codable, CaseIterable {
 }
 
 enum TaskType: String, Codable {
-    case task, reminder, idea
+    case task, reminder, idea, social
+
+    // Fall back to .task for any unknown/future type so the whole task
+    // list never fails to decode because of one new value.
+    init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = TaskType(rawValue: raw) ?? .task
+    }
 }
 
 struct TaskItem: Identifiable, Codable {
@@ -114,11 +121,13 @@ struct UpdateTaskInput: Codable {
     var endTime: String?
     var priority: Priority?
     var status: TaskStatus?
+    var taskType: TaskType?
     
     enum CodingKeys: String, CodingKey {
         case title, description, date, priority, status
         case startTime = "start_time"
         case endTime = "end_time"
+        case taskType = "task_type"
     }
 }
 
