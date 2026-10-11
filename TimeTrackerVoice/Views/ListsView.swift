@@ -137,6 +137,8 @@ struct ListsView: View {
         HStack(spacing: 12) {
             if item.taskType == .social {
                 planTile(item)
+            } else {
+                categoryTile(item)
             }
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
@@ -206,6 +208,54 @@ struct ListsView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
+    /// A backlog item's category icon on a tint of its color, or a lightbulb when it has none.
+    private func categoryTile(_ item: TaskItem) -> some View {
+        let category = item.categoryId.flatMap(taskManager.getCategoryById)
+        let tint = category.map { Color(hex: $0.color) } ?? NativePalette.accent
+        return ZStack {
+            if category != nil {
+                tint.opacity(0.15)
+            } else {
+                NativePalette.background
+            }
+            Image(systemName: category.map(Self.symbol(for:)) ?? "lightbulb")
+                .font(.system(size: 22, weight: .medium))
+                .foregroundStyle(category != nil ? Self.readableIcon(tint) : tint)
+        }
+        .frame(width: 56, height: 56)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityElement()
+        .accessibilityLabel(category.map { (he ? "קטגוריה: " : "Category: ") + $0.name } ?? (he ? "ללא קטגוריה" : "No category"))
+    }
+
+    /// Darkens light category colors (e.g. yellow) in light mode so the icon stays visible on its tint.
+    static func readableIcon(_ color: Color) -> Color {
+        let base = UIColor(color)
+        return Color(uiColor: UIColor { traits in
+            guard traits.userInterfaceStyle != .dark else { return base }
+            var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+            base.getRed(&r, green: &g, blue: &b, alpha: &a)
+            let luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+            let k: CGFloat = luminance > 0.55 ? 0.55 : 1
+            return UIColor(red: r * k, green: g * k, blue: b * k, alpha: a)
+        })
+    }
+
+    /// SF Symbol for the default categories (matched by key); custom ones get a tag.
+    static func symbol(for category: Category) -> String {
+        switch category.key {
+        case "personal": return "person"
+        case "work": return "briefcase"
+        case "health": return "heart"
+        case "learning": return "book"
+        case "family": return "house"
+        case "friends": return "person.2"
+        case "hobby": return "paintpalette"
+        case "networking": return "network"
+        default: return "tag"
+        }
+    }
+
     private var emptyState: some View {
         VStack(spacing: 12) {
             Image(systemName: segment == .backlog ? "tray" : "star")
@@ -233,6 +283,7 @@ struct ListsView: View {
 
     private func refresh() async {
         await taskManager.fetchTasks()
+        await taskManager.fetchCategories()
         await attachments.refreshIndex()
     }
 
