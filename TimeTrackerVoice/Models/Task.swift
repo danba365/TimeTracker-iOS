@@ -38,6 +38,7 @@ struct TaskItem: Identifiable, Codable {
     var tags: [String]
     var isRecurring: Bool
     var parentTaskId: String?  // For recurring task instances
+    var linkUrl: String?  // Optional web link (Social Plans: a movie, show or place)
     var createdAt: String
     var updatedAt: String
     
@@ -49,6 +50,7 @@ struct TaskItem: Identifiable, Codable {
         case categoryId = "category_id"
         case isRecurring = "is_recurring"
         case parentTaskId = "parent_task_id"
+        case linkUrl = "link_url"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }
@@ -122,12 +124,15 @@ struct UpdateTaskInput: Codable {
     var priority: Priority?
     var status: TaskStatus?
     var taskType: TaskType?
+    /// nil leaves the link alone; .some(nil) clears it (sent as JSON null).
+    var linkUrl: String?? = nil
     
     enum CodingKeys: String, CodingKey {
         case title, description, date, priority, status
         case startTime = "start_time"
         case endTime = "end_time"
         case taskType = "task_type"
+        case linkUrl = "link_url"
     }
 }
 
@@ -141,5 +146,27 @@ struct User: Codable {
     enum CodingKeys: String, CodingKey {
         case id, email
         case createdAt = "created_at"
+    }
+}
+
+// MARK: - Links
+
+enum TaskLink {
+    /// Accepts "imdb.com/..." or a full http(s) URL. Returns nil for anything else.
+    static func normalize(_ raw: String) -> URL? {
+        let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return nil }
+        let withScheme = text.range(of: "^[a-zA-Z][a-zA-Z0-9+.-]*:", options: .regularExpression) != nil
+            ? text : "https://\(text)"
+        guard let url = URL(string: withScheme),
+              let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https",
+              let host = url.host, host.contains(".") else { return nil }
+        return url
+    }
+
+    /// Short label for a link, e.g. "imdb.com".
+    static func label(for url: URL) -> String {
+        guard let host = url.host else { return url.absoluteString }
+        return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
     }
 }
