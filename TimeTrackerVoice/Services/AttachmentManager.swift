@@ -41,8 +41,19 @@ final class AttachmentManager: ObservableObject {
     /// Cached local copy, downloading through a 60-second signed URL when needed.
     func localFile(for attachment: TaskAttachment) async throws -> URL {
         let folder = cacheRoot.appendingPathComponent(attachment.id, isDirectory: true)
-        let file = folder.appendingPathComponent(attachment.fileName)
+        let file = folder.appendingPathComponent(Self.localCacheName(attachment.fileName))
         if FileManager.default.fileExists(atPath: file.path) { return file }
+
+        do {
+            return try await download(attachment, folder: folder, file: file)
+        } catch let error as AttachmentError {
+            throw error
+        } catch {
+            throw AttachmentError.failed
+        }
+    }
+
+    private func download(_ attachment: TaskAttachment, folder: URL, file: URL) async throws -> URL {
 
         guard let signURL = URL(string: "\(Config.supabaseURL)/storage/v1/object/sign/\(bucket)/\(attachment.storagePath)") else {
             throw AttachmentError.failed
@@ -63,14 +74,42 @@ final class AttachmentManager: ObservableObject {
         return file
     }
 
+    /// Filesystem-safe cache file name derived from the user-supplied name (display name is unchanged).
+    static func localCacheName(_ fileName: String) -> String {
+        let cleaned = String(String.UnicodeScalarView(fileName.unicodeScalars.map { scalar in
+            (scalar == "/" || scalar == ":" || scalar.properties.generalCategory == .control) ? "_" : scalar
+        }))
+        if cleaned.isEmpty || cleaned == "." || cleaned == ".." { return "file" }
+
+        let ns = cleaned as NSString
+        var ext = ns.pathExtension
+        var base = ns.deletingPathExtension
+        if ext.utf8.count > 20 { ext = ""; base = cleaned }
+        let extPart = ext.isEmpty ? "" : "." + ext
+        let maxBase = max(1, 120 - extPart.utf8.count)
+        while base.utf8.count > maxBase { base.removeLast() }
+        if base.isEmpty || base == "." || base == ".." { base = "file" }
+        return base + extPart
+    }
+
+    /// Clear in-memory index and cached files (sign-out).
+    func reset() {
+        taskIdsWithAttachments = []
+        try? FileManager.default.removeItem(at: cacheRoot)
+    }
+
     /// Best effort: remove a task's stored files before the task is deleted.
     func deleteFiles(forTask taskId: String) async {
         do {
-            let paths = try await attachments(for: taskId).map(\.storagePath)
+            let items = try await attachments(for: taskId)
+            let paths = items.map(\.storagePath)
             guard !paths.isEmpty,
                   let url = URL(string: "\(Config.supabaseURL)/storage/v1/object/\(bucket)") else { return }
             _ = try await SupabaseRequest.send(url, method: "DELETE", json: ["prefixes": paths])
             taskIdsWithAttachments.remove(taskId)
+            for item in items {
+                try? FileManager.default.removeItem(at: cacheRoot.appendingPathComponent(item.id, isDirectory: true))
+            }
         } catch {
             print("⚠️ Could not remove attachment files: \(error)")
         }
