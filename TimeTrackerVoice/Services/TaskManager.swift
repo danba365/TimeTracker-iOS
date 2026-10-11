@@ -311,6 +311,7 @@ class TaskManager: ObservableObject {
     }
     
     func deleteTask(id: String) async throws {
+        await AttachmentManager.shared.deleteFiles(forTask: id)
         guard let token = AuthManager.shared.getAccessToken() else {
             throw TaskError.notAuthenticated
         }
