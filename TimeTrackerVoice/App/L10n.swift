@@ -114,6 +114,7 @@ final class L10n: ObservableObject {
     }
 
     // New task sheet
+    var ok: String { isHebrew ? "אישור" : "OK" }
     var files: String { isHebrew ? "קבצים" : "Files" }
     var fileUnavailable: String { isHebrew ? "הקובץ לא זמין" : "File unavailable" }
     var fileOpenFailed: String { isHebrew ? "לא ניתן לפתוח את הקובץ. בדוק את החיבור." : "Couldn't open the file. Check your connection." }

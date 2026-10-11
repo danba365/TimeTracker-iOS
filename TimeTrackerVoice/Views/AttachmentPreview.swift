@@ -4,12 +4,17 @@ import QuickLook
 /// Full-screen Quick Look preview (PDF pages / zoomable image) with the system Share button.
 struct AttachmentPreview: UIViewControllerRepresentable {
     let fileURL: URL
+    let onDismiss: () -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(fileURL: fileURL) }
 
     func makeUIViewController(context: Context) -> UINavigationController {
         let controller = QLPreviewController()
         controller.dataSource = context.coordinator
+        controller.navigationItem.leftBarButtonItem = UIBarButtonItem(
+            systemItem: .done,
+            primaryAction: UIAction { _ in onDismiss() }
+        )
         return UINavigationController(rootViewController: controller)
     }
 

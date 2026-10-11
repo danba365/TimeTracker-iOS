@@ -61,11 +61,11 @@ struct TaskDetailView: View {
             attachments = (try? await AttachmentManager.shared.attachments(for: task.id)) ?? []
         }
         .fullScreenCover(item: $previewFile) { file in
-            AttachmentPreview(fileURL: file.url)
+            AttachmentPreview(fileURL: file.url, onDismiss: { previewFile = nil })
                 .ignoresSafeArea()
         }
         .alert(fileError ?? "", isPresented: Binding(get: { fileError != nil }, set: { if !$0 { fileError = nil } })) {
-            Button("OK", role: .cancel) {}
+            Button(L10n.shared.ok, role: .cancel) {}
         }
         .toolbarBackground(Color(hex: "1a1a2e"), for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
@@ -237,7 +237,7 @@ struct TaskDetailView: View {
                         if openingId == attachment.id {
                             ProgressView().tint(.white)
                         } else {
-                            Image(systemName: "chevron.right")
+                            Image(systemName: "chevron.forward")
                                 .font(.system(size: 12))
                                 .foregroundColor(Color(hex: "64748b"))
                         }
