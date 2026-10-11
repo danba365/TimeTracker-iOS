@@ -30,6 +30,7 @@
 		AF2E3F7E65C7E864E2FFADE2 /* Person.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAC6BB8463FA287ED632AE1B /* Person.swift */; };
 		B2B3EA9ED52CA3BB433347F8 /* TaskManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E864E346ACAB89104F342E9F /* TaskManager.swift */; };
 		B4407B70D6AB17AABD9DB426 /* ContactImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2C3980A4819F951F83ABC8E /* ContactImportView.swift */; };
+		A1C0FFEE0000000000000021 /* AttachmentPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000000022 /* AttachmentPreview.swift */; };
 		C5081ED43733677D0C575E93 /* TaskDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A6D3811B805D7695A475DE5 /* TaskDetailView.swift */; };
 		CDC44DD0190828061EA22FDA /* TimeTrackerVoiceApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8C3C8D017C28EC1FC41A04C /* TimeTrackerVoiceApp.swift */; };
 		D3CE25E03C1A76C43FE3D1EB /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D3FD0263B3A11FBBA221B23 /* AuthManager.swift */; };
@@ -69,6 +70,7 @@
 		53EA97FB722407D2230B4B9C /* AudioStreamManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioStreamManager.swift; sourceTree = "<group>"; };
 		75BE21884DDAC8E10F4EDFCB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		78439F0D6785C0874C264021 /* Task.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Task.swift; sourceTree = "<group>"; };
+		A1C0FFEE0000000000000022 /* AttachmentPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttachmentPreview.swift; sourceTree = "<group>"; };
 		8A6D3811B805D7695A475DE5 /* TaskDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskDetailView.swift; sourceTree = "<group>"; };
 		8AB28059F207891C60A96719 /* ContactsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsView.swift; sourceTree = "<group>"; };
 		8CCDEEFF3DADEBCC51030F10 /* VoiceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceView.swift; sourceTree = "<group>"; };
@@ -144,6 +146,7 @@
 				97E355317A47B9A523C1B8EE /* ListsView.swift */,
 				2293BE54AE90FD05E806AAB1 /* MainTabView.swift */,
 				A955FC5339920743150036A6 /* SettingsView.swift */,
+				A1C0FFEE0000000000000022 /* AttachmentPreview.swift */,
 				8A6D3811B805D7695A475DE5 /* TaskDetailView.swift */,
 				0D2477154C54FC4FD6E11889 /* TasksView.swift */,
 				B9591C4C54EC4F7124AE2508 /* VoiceOrbView.swift */,
@@ -311,6 +314,7 @@
 				757C34EAAFDE72C41DD227C6 /* SorbetTheme.swift in Sources */,
 				1E41C54FF5AB30F421AB9E3E /* SpeechRecognizer.swift in Sources */,
 				69D99FBFA5CADD16244BD637 /* Task.swift in Sources */,
+				A1C0FFEE0000000000000021 /* AttachmentPreview.swift in Sources */,
 				C5081ED43733677D0C575E93 /* TaskDetailView.swift in Sources */,
 				B2B3EA9ED52CA3BB433347F8 /* TaskManager.swift in Sources */,
 				DD870AD22053D46299184719 /* TasksView.swift in Sources */,
