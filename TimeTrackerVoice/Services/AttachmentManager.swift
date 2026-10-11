@@ -41,7 +41,7 @@ final class AttachmentManager: ObservableObject {
     /// Cached local copy, downloading through a 60-second signed URL when needed.
     func localFile(for attachment: TaskAttachment) async throws -> URL {
         let folder = cacheRoot.appendingPathComponent(attachment.id, isDirectory: true)
-        let file = folder.appendingPathComponent(Self.localCacheName(attachment.fileName))
+        let file = folder.appendingPathComponent(Self.localCacheName(attachment.fileName, mimeType: attachment.mimeType))
         if FileManager.default.fileExists(atPath: file.path) { return file }
 
         do {
@@ -75,7 +75,7 @@ final class AttachmentManager: ObservableObject {
     }
 
     /// Filesystem-safe cache file name derived from the user-supplied name (display name is unchanged).
-    static func localCacheName(_ fileName: String) -> String {
+    static func localCacheName(_ fileName: String, mimeType: String? = nil) -> String {
         let cleaned = String(String.UnicodeScalarView(fileName.unicodeScalars.map { scalar in
             (scalar == "/" || scalar == ":" || scalar.properties.generalCategory == .control) ? "_" : scalar
         }))
@@ -85,6 +85,12 @@ final class AttachmentManager: ObservableObject {
         var ext = ns.pathExtension
         var base = ns.deletingPathExtension
         if ext.utf8.count > 20 { ext = ""; base = cleaned }
+        // Quick Look decides by extension, so give extension-less names one from the MIME type.
+        if ext.isEmpty, let mimeType {
+            let byMime = ["application/pdf": "pdf", "image/jpeg": "jpg", "image/png": "png",
+                          "image/heic": "heic", "image/heif": "heif", "image/webp": "webp"]
+            ext = byMime[mimeType.lowercased()] ?? ""
+        }
         let extPart = ext.isEmpty ? "" : "." + ext
         let maxBase = max(1, 120 - extPart.utf8.count)
         while base.utf8.count > maxBase { base.removeLast() }
