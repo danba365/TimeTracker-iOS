@@ -63,6 +63,7 @@ class AuthManager: ObservableObject {
         
         // Drop cached Google Calendar data so it can't leak to the next user
         CalendarEventManager.shared.reset()
+        AttachmentManager.shared.reset()
         
         // Sign out of Google
         GIDSignIn.sharedInstance.signOut()

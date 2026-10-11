@@ -138,7 +138,10 @@ struct TasksView: View {
                     .presentationDetents([.medium])
             }
             .onAppear {
-                Task { await taskManager.fetchTasks() }
+                Task {
+                    await taskManager.fetchTasks()
+                    await AttachmentManager.shared.refreshIndex()
+                }
             }
             .onReceive(minuteTimer) { now = $0 }
             .task(id: weekStart) {
@@ -524,6 +527,7 @@ struct TasksView: View {
         await peopleManager.fetchPeople()
         await eventManager.fetchEvents()
         if Config.isGoogleCalendarEnabled, let last = weekDays.last { await calendarManager.fetch(from: weekStart, to: last) }
+        await AttachmentManager.shared.refreshIndex()
     }
 
     // MARK: - Data
@@ -746,6 +750,7 @@ private struct DayFocus {
 struct AgendaRowView: View {
     let item: AgendaItem
     let onToggle: () -> Void
+    @ObservedObject private var attachmentManager = AttachmentManager.shared
 
     var body: some View {
         HStack(spacing: 14) {
@@ -767,6 +772,11 @@ struct AgendaRowView: View {
                     }
                     if item.isRecurring {
                         Image(systemName: "repeat")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(NativePalette.muted)
+                    }
+                    if let taskId = item.task?.id, attachmentManager.taskIdsWithAttachments.contains(taskId) {
+                        Image(systemName: "paperclip")
                             .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(NativePalette.muted)
                     }

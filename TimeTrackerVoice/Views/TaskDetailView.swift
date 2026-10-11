@@ -2,6 +2,10 @@ import SwiftUI
 
 /// Detail view for displaying full task/reminder information
 struct TaskDetailView: View {
+    @State private var attachments: [TaskAttachment] = []
+    @State private var openingId: String?
+    @State private var previewFile: PreviewFile?
+    @State private var fileError: String?
     let task: TaskItem
     @EnvironmentObject var taskManager: TaskManager
     @Environment(\.dismiss) private var dismiss
@@ -37,6 +41,10 @@ struct TaskDetailView: View {
                     if let description = task.description, !description.isEmpty {
                         descriptionSection(description)
                     }
+
+                    if !attachments.isEmpty {
+                        filesSection
+                    }
                     
                     // Tags Section
                     if !task.tags.isEmpty {
@@ -49,6 +57,16 @@ struct TaskDetailView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            attachments = (try? await AttachmentManager.shared.attachments(for: task.id)) ?? []
+        }
+        .fullScreenCover(item: $previewFile) { file in
+            AttachmentPreview(fileURL: file.url, onDismiss: { previewFile = nil })
+                .ignoresSafeArea()
+        }
+        .alert(fileError ?? "", isPresented: Binding(get: { fileError != nil }, set: { if !$0 { fileError = nil } })) {
+            Button(L10n.shared.ok, role: .cancel) {}
+        }
         .toolbarBackground(Color(hex: "1a1a2e"), for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
     }
@@ -185,6 +203,72 @@ struct TaskDetailView: View {
         .cornerRadius(16)
     }
     
+    // MARK: - Files Section
+
+    private var filesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "paperclip")
+                    .foregroundColor(Color(hex: "60a5fa"))
+                Text(L10n.shared.files)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Color(hex: "94a3b8"))
+            }
+
+            ForEach(attachments) { attachment in
+                Button {
+                    open(attachment)
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: attachment.isPDF ? "doc.richtext" : "photo")
+                            .font(.system(size: 20))
+                            .foregroundColor(Color(hex: "60a5fa"))
+                            .frame(width: 28)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(attachment.fileName)
+                                .font(.system(size: 15))
+                                .foregroundColor(.white)
+                                .lineLimit(1)
+                            Text(attachment.formattedSize)
+                                .font(.system(size: 12))
+                                .foregroundColor(Color(hex: "94a3b8"))
+                        }
+                        Spacer()
+                        if openingId == attachment.id {
+                            ProgressView().tint(.white)
+                        } else {
+                            Image(systemName: "chevron.forward")
+                                .font(.system(size: 12))
+                                .foregroundColor(Color(hex: "64748b"))
+                        }
+                    }
+                    .padding(.vertical, 6)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(openingId != nil)
+            }
+        }
+        .padding(16)
+        .background(Color.white.opacity(0.05))
+        .cornerRadius(16)
+    }
+
+    private func open(_ attachment: TaskAttachment) {
+        openingId = attachment.id
+        Task {
+            defer { openingId = nil }
+            do {
+                let url = try await AttachmentManager.shared.localFile(for: attachment)
+                previewFile = PreviewFile(url: url)
+            } catch AttachmentManager.AttachmentError.unavailable {
+                fileError = L10n.shared.fileUnavailable
+            } catch {
+                fileError = L10n.shared.fileOpenFailed
+            }
+        }
+    }
+
     // MARK: - Description Section
     
     private func descriptionSection(_ description: String) -> some View {
