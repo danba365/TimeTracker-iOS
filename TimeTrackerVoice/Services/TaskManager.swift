@@ -124,7 +124,11 @@ class TaskManager: ObservableObject {
                 return
             }
             
-            let url = URL(string: "\(Config.supabaseURL)/rest/v1/tasks?user_id=eq.\(userId)&date=gte.\(startStr)&date=lte.\(endStr)&order=date.asc,start_time.asc")!
+            // Dated tasks in the window above, plus every Backlog (idea) and Social
+            // plan item: their date is just the day they were added, so older ones
+            // would otherwise drop out of the Lists tab.
+            let filter = "or=(and(date.gte.\(startStr),date.lte.\(endStr)),task_type.in.(idea,social))"
+            let url = URL(string: "\(Config.supabaseURL)/rest/v1/tasks?user_id=eq.\(userId)&\(filter)&order=date.asc,start_time.asc")!
             var request = URLRequest(url: url)
             request.timeoutInterval = 10 // 10 second timeout
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")

@@ -9,6 +9,8 @@ final class AttachmentManager: ObservableObject {
     enum AttachmentError: Error { case unavailable, failed }
 
     @Published private(set) var taskIdsWithAttachments: Set<String> = []
+    /// Oldest image per task (thumbnails for social plans in the Lists tab).
+    @Published private(set) var firstImageByTask: [String: TaskAttachment] = [:]
 
     private let bucket = "task-attachments"
     private let cacheRoot: URL = FileManager.default
@@ -17,14 +19,19 @@ final class AttachmentManager: ObservableObject {
 
     private init() {}
 
-    /// Which tasks have files (drives the paperclip in the task lists).
+    /// Which tasks have files (drives the paperclip in the task lists) and each task's first image.
     func refreshIndex() async {
-        guard let url = URL(string: "\(Config.supabaseURL)/rest/v1/task_attachments?select=task_id") else { return }
+        guard let url = URL(string: "\(Config.supabaseURL)/rest/v1/task_attachments?select=*&order=created_at.asc") else { return }
         do {
             let (data, http) = try await SupabaseRequest.send(url)
             guard http.statusCode == 200 else { return }
-            let rows = try JSONDecoder().decode([[String: String]].self, from: data)
-            taskIdsWithAttachments = Set(rows.compactMap { $0["task_id"] })
+            let rows = try JSONDecoder().decode([TaskAttachment].self, from: data)
+            taskIdsWithAttachments = Set(rows.map(\.taskId))
+            var firstImages: [String: TaskAttachment] = [:]
+            for row in rows where row.isImage && firstImages[row.taskId] == nil {
+                firstImages[row.taskId] = row
+            }
+            firstImageByTask = firstImages
         } catch {
             print("⚠️ Attachment index refresh failed: \(error)")
         }
@@ -161,6 +168,7 @@ final class AttachmentManager: ObservableObject {
     /// Clear in-memory index and cached files (sign-out).
     func reset() {
         taskIdsWithAttachments = []
+        firstImageByTask = [:]
         try? FileManager.default.removeItem(at: cacheRoot)
     }
 

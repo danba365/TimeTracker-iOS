@@ -12,7 +12,7 @@ struct MainTabView: View {
     @State private var selectedTab: Tab = .tasks
     
     enum Tab {
-        case tasks, chat, voice, contacts
+        case tasks, lists, chat, voice, contacts
     }
     
     var body: some View {
@@ -22,6 +22,8 @@ struct MainTabView: View {
                 switch selectedTab {
                 case .tasks:
                     TasksView()
+                case .lists:
+                    ListsView()
                 case .chat:
                     ChatView()
                 case .voice:
@@ -97,7 +99,7 @@ struct VacationTodayBanner: View {
 
 // MARK: - Custom Tab Bar
 
-/// Floating tab bar (iOS 26 style): Tasks, Chat and Contacts in a glass
+/// Floating tab bar (iOS 26 style): Tasks, Lists, Chat and Contacts in a glass
 /// capsule, with Voice as a separate round mic button.
 struct CustomTabBar: View {
     @Binding var selectedTab: MainTabView.Tab
@@ -107,6 +109,9 @@ struct CustomTabBar: View {
             HStack(spacing: 0) {
                 TabBarButton(icon: "calendar", label: L10n.tabTasks, isSelected: selectedTab == .tasks) {
                     selectedTab = .tasks
+                }
+                TabBarButton(icon: "checklist", label: L10n.tabLists, isSelected: selectedTab == .lists) {
+                    selectedTab = .lists
                 }
                 TabBarButton(icon: "bubble.left", label: L10n.tabChat, isSelected: selectedTab == .chat) {
                     selectedTab = .chat
@@ -141,6 +146,9 @@ struct CustomTabBar: View {
 // MARK: - Tab Bar Button
 
 struct TabBarButton: View {
+    /// Symbols without a ".fill" variant (or that read better outlined).
+    private static let unfilledIcons: Set<String> = ["calendar", "checklist"]
+
     let icon: String
     let label: String
     let isSelected: Bool
@@ -149,7 +157,7 @@ struct TabBarButton: View {
     var body: some View {
         Button(action: action) {
             VStack(spacing: 3) {
-                Image(systemName: isSelected && icon != "calendar" ? "\(icon).fill" : icon)
+                Image(systemName: isSelected && !Self.unfilledIcons.contains(icon) ? "\(icon).fill" : icon)
                     .font(.system(size: 20, weight: .medium))
                     .frame(height: 24)
                 Text(label)
