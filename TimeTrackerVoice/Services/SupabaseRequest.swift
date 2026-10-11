@@ -8,6 +8,7 @@ enum SupabaseRequest {
         _ url: URL,
         method: String = "GET",
         json: Any? = nil,
+        body: Data? = nil,
         extraHeaders: [String: String] = [:]
     ) async throws -> (Data, HTTPURLResponse) {
         func perform() async throws -> (Data, HTTPURLResponse) {
@@ -22,6 +23,8 @@ enum SupabaseRequest {
             if let json {
                 request.setValue("application/json", forHTTPHeaderField: "Content-Type")
                 request.httpBody = try JSONSerialization.data(withJSONObject: json)
+            } else if let body {
+                request.httpBody = body
             }
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
