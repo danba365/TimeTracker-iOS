@@ -1,8 +1,8 @@
 import SwiftUI
 import PhotosUI
 
-/// Mobile equivalent of the web app's Backlog and Social Plans sections.
-/// Two inboxes in one tab: Backlog (task_type == .idea) and Social Plans
+/// The Lists tab: mobile equivalent of the web app's Backlog and Social Plans
+/// sections. Two inboxes in one tab: Backlog (task_type == .idea) and Social Plans
 /// (task_type == .social). Add items, tap to edit (social plans open a full
 /// form with a link and photos), swipe to delete, or swipe to schedule
 /// (promote into a dated task).
@@ -10,8 +10,8 @@ struct ListsView: View {
     @EnvironmentObject var taskManager: TaskManager
     @ObservedObject private var l10n = L10n.shared
 
-    enum Segment { case backlog, social }
-    @State private var segment: Segment = .backlog
+    enum Segment: String { case backlog, social }
+    @AppStorage("listsSegment") private var segment: Segment = .backlog
     @State private var captureText: String = ""
     @State private var promoteItem: TaskItem?
     @State private var planForm: PlanForm?
@@ -22,108 +22,218 @@ struct ListsView: View {
 
     private var currentType: TaskType { segment == .backlog ? .idea : .social }
 
-    private var items: [TaskItem] {
+    private func items(of type: TaskType) -> [TaskItem] {
         taskManager.tasks
-            .filter { $0.taskType == currentType }
+            .filter { $0.taskType == type }
             .sorted { $0.createdAt > $1.createdAt }
     }
 
+    private var items: [TaskItem] { items(of: currentType) }
+
     var body: some View {
-        VStack(spacing: 0) {
-            Text(he ? "רשימות" : "Lists")
-                .font(.system(size: 24, weight: .bold))
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-
-            Picker("", selection: $segment) {
-                Text(he ? "בקלוג" : "Backlog").tag(Segment.backlog)
-                Text(he ? "בילויים" : "Social").tag(Segment.social)
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-
-            HStack(spacing: 8) {
-                TextField(he ? "הוסף לרשימה..." : "Add to the list...", text: $captureText)
-                    .textFieldStyle(.roundedBorder)
-                    .onSubmit(addItem)
-                Button(action: addItem) {
-                    Image(systemName: "plus.circle.fill").font(.system(size: 28))
+        NavigationStack {
+            List {
+                Section {
+                    segmentPicker
+                    addField
                 }
-                .disabled(captureText.trimmingCharacters(in: .whitespaces).isEmpty)
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 8)
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
 
-            if items.isEmpty {
-                Spacer()
-                VStack(spacing: 10) {
-                    Text(segment == .backlog ? "🗂️" : "🎉").font(.system(size: 44))
-                    Text(he ? "הרשימה ריקה" : "This list is empty")
-                        .font(.system(size: 15))
-                        .foregroundColor(.secondary)
-                }
-                Spacer()
-            } else {
-                List {
-                    ForEach(items) { item in
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack(spacing: 6) {
-                                Text(item.title).font(.system(size: 16, weight: .medium))
-                                if attachments.taskIdsWithAttachments.contains(item.id) {
-                                    Image(systemName: "paperclip")
-                                        .font(.system(size: 13))
-                                        .foregroundColor(.secondary)
-                                        .accessibilityLabel(he ? "יש קבצים" : "Has files")
-                                }
-                            }
-                            if let d = item.description, !d.isEmpty {
-                                Text(d).font(.system(size: 13)).foregroundColor(.secondary)
-                            }
-                            if let link = item.linkUrl, let url = TaskLink.normalize(link) {
-                                Button { openURL(url) } label: {
-                                    Label(TaskLink.label(for: url), systemImage: "link")
-                                        .font(.system(size: 13))
-                                        .lineLimit(1)
-                                }
-                                .buttonStyle(.borderless)
-                                .accessibilityLabel((he ? "פתח קישור: " : "Open link: ") + TaskLink.label(for: url))
-                            }
+                if items.isEmpty {
+                    Section {
+                        emptyState
+                    }
+                    .listRowBackground(Color.clear)
+                } else {
+                    Section {
+                        ForEach(items) { item in
+                            row(item)
                         }
-                        .padding(.vertical, 2)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
-                        .onTapGesture { planForm = .edit(item) }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) { deleteItem(item) } label: {
-                                Label(he ? "מחק" : "Delete", systemImage: "trash")
-                            }
-                            Button { promoteItem = item } label: {
-                                Label(he ? "קבע תאריך" : "Schedule", systemImage: "calendar")
-                            }
-                            .tint(.blue)
-                        }
+                    } header: {
+                        Text(countHeader)
                     }
                 }
-                .listStyle(.plain)
+            }
+            .listStyle(.insetGrouped)
+            .listSectionSpacing(.compact)
+            .scrollContentBackground(.hidden)
+            .background(NativePalette.background.ignoresSafeArea())
+            .contentMargins(.bottom, 100, for: .scrollContent)
+            .scrollDismissesKeyboard(.interactively)
+            .refreshable { await refresh() }
+            .navigationTitle(L10n.tabLists)
+            .navigationBarTitleDisplayMode(.large)
+            .sheet(item: $promoteItem) { item in
+                SchedulePlanSheet(item: item) { promoteItem = nil }
+                    .environmentObject(taskManager)
+            }
+            .sheet(item: $planForm) { form in
+                PlanFormSheet(form: form) { planForm = nil }
+                    .environmentObject(taskManager)
+            }
+            .onAppear {
+                Task { await refresh() }
             }
         }
+        .tint(NativePalette.accent)
         .environment(\.layoutDirection, he ? .rightToLeft : .leftToRight)
-        .sheet(item: $promoteItem) { item in
-            SchedulePlanSheet(item: item) { promoteItem = nil }
-                .environmentObject(taskManager)
+    }
+
+    // MARK: - Header controls
+
+    private var segmentPicker: some View {
+        Picker(he ? "רשימה" : "List", selection: $segment) {
+            Text(segmentLabel(he ? "בקלוג" : "Backlog", count: items(of: .idea).count)).tag(Segment.backlog)
+            Text(segmentLabel(he ? "בילויים" : "Social", count: items(of: .social).count)).tag(Segment.social)
         }
-        .sheet(item: $planForm) { form in
-            PlanFormSheet(form: form) { planForm = nil }
-                .environmentObject(taskManager)
+        .pickerStyle(.segmented)
+    }
+
+    private func segmentLabel(_ name: String, count: Int) -> String {
+        count > 0 ? "\(name) \(count)" : name
+    }
+
+    private var addField: some View {
+        HStack(spacing: 8) {
+            TextField(addPlaceholder, text: $captureText)
+                .font(.system(size: 16))
+                .submitLabel(.done)
+                .onSubmit(addItem)
+            Button(action: addItem) {
+                Image(systemName: "plus")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 38, height: 38)
+                    .background(Circle().fill(NativePalette.accent))
+            }
+            .buttonStyle(.plain)
+            .disabled(captureText.trimmingCharacters(in: .whitespaces).isEmpty)
+            .opacity(captureText.trimmingCharacters(in: .whitespaces).isEmpty ? 0.5 : 1)
+            .accessibilityLabel(segment == .backlog ? (he ? "הוסף לבקלוג" : "Add to backlog") : (he ? "הוסף בילוי" : "Add plan"))
         }
-        .onAppear {
-            Task {
-                await taskManager.fetchTasks()
-                await attachments.refreshIndex()
+        .padding(.leading, 16)
+        .padding(.trailing, 6)
+        .frame(height: 50)
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(NativePalette.surface))
+    }
+
+    private var addPlaceholder: String {
+        segment == .backlog ? (he ? "הוסף לבקלוג…" : "Add to backlog…") : (he ? "הוסף בילוי…" : "Add a plan…")
+    }
+
+    private var countHeader: String {
+        let n = items.count
+        if segment == .backlog {
+            return he ? "\(n) פריטים" : (n == 1 ? "1 item" : "\(n) items")
+        }
+        return he ? "\(n) בילויים" : (n == 1 ? "1 plan" : "\(n) plans")
+    }
+
+    // MARK: - Rows
+
+    private func row(_ item: TaskItem) -> some View {
+        HStack(spacing: 12) {
+            if item.taskType == .social {
+                planTile(item)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(item.title)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(NativePalette.ink)
+                        .lineLimit(1)
+                    if attachments.taskIdsWithAttachments.contains(item.id) {
+                        Image(systemName: "paperclip")
+                            .font(.system(size: 13))
+                            .foregroundStyle(NativePalette.muted)
+                            .accessibilityLabel(he ? "יש קבצים" : "Has files")
+                    }
+                }
+                if let d = item.description, !d.isEmpty {
+                    Text(d)
+                        .font(.system(size: 14))
+                        .foregroundStyle(NativePalette.muted)
+                        .lineLimit(1)
+                }
+                if let link = item.linkUrl, let url = TaskLink.normalize(link) {
+                    Button { openURL(url) } label: {
+                        Label(TaskLink.label(for: url), systemImage: "link")
+                            .font(.system(size: 13, weight: .medium))
+                            .lineLimit(1)
+                    }
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(NativePalette.accent)
+                    .accessibilityLabel((he ? "פתח קישור: " : "Open link: ") + TaskLink.label(for: url))
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .onTapGesture { planForm = .edit(item) }
+        .accessibilityAddTraits(.isButton)
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            Button(role: .destructive) { deleteItem(item) } label: {
+                Label(he ? "מחק" : "Delete", systemImage: "trash")
+            }
+            Button { promoteItem = item } label: {
+                Label(he ? "קבע תאריך" : "Schedule", systemImage: "calendar")
+            }
+            .tint(.blue)
+        }
+    }
+
+    /// First photo of a social plan, or a star tile when it has none.
+    @ViewBuilder
+    private func planTile(_ item: TaskItem) -> some View {
+        Group {
+            if let photo = attachments.firstImageByTask[item.id] {
+                AttachmentThumbnail(attachment: photo)
+                    .accessibilityLabel(he ? "תמונה" : "Photo")
+            } else {
+                ZStack {
+                    NativePalette.background
+                    Image(systemName: "star")
+                        .font(.system(size: 22, weight: .medium))
+                        .foregroundStyle(NativePalette.accent)
+                }
+                .accessibilityHidden(true)
             }
         }
+        .frame(width: 56, height: 56)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: segment == .backlog ? "tray" : "star")
+                .font(.system(size: 30, weight: .medium))
+                .foregroundStyle(NativePalette.accent)
+                .frame(width: 72, height: 72)
+                .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(NativePalette.accentSoft))
+            Text(segment == .backlog
+                 ? (he ? "הבקלוג ריק" : "Your backlog is empty")
+                 : (he ? "אין עדיין בילויים" : "No plans yet"))
+                .font(.system(size: 20, weight: .semibold))
+            Text(segment == .backlog
+                 ? (he ? "רשום כאן דברים לעשות בלי תאריך — תקבע אותם כשתהיה מוכן"
+                       : "Jot down things to do without a date, and schedule them when you're ready")
+                 : (he ? "תפוס כאן רעיונות לבילויים ומפגשים — עם קישור ותמונות — לפני שתקבע להם תאריך"
+                       : "Capture ideas for outings, with a link and photos, before you pick a date"))
+                .font(.system(size: 15))
+                .foregroundStyle(NativePalette.muted)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 48)
+        .padding(.horizontal, 16)
+    }
+
+    private func refresh() async {
+        await taskManager.fetchTasks()
+        await attachments.refreshIndex()
     }
 
     private func addItem() {
