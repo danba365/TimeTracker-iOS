@@ -1,6 +1,6 @@
 import Foundation
 
-/// A file attached to a task (uploaded from the web app).
+/// A file attached to a task (uploaded from the web app, or a photo from the iOS Lists tab).
 struct TaskAttachment: Codable, Identifiable, Hashable {
     let id: String
     let taskId: String
@@ -23,6 +23,7 @@ struct TaskAttachment: Codable, Identifiable, Hashable {
     }
 
     var isPDF: Bool { mimeType == "application/pdf" }
+    var isImage: Bool { mimeType.hasPrefix("image/") }
 
     var formattedSize: String {
         ByteCountFormatter.string(fromByteCount: Int64(sizeBytes), countStyle: .file)

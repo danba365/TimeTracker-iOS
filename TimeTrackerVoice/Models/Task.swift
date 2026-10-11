@@ -103,6 +103,7 @@ struct CreateTaskInput: Codable {
     var tags: [String] = []
     var isRecurring: Bool = false
     var userId: String?  // Required for Supabase RLS
+    var linkUrl: String?
     
     enum CodingKeys: String, CodingKey {
         case title, description, date, priority, status, tags
@@ -112,6 +113,7 @@ struct CreateTaskInput: Codable {
         case categoryId = "category_id"
         case isRecurring = "is_recurring"
         case userId = "user_id"
+        case linkUrl = "link_url"
     }
 }
 

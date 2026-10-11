@@ -1,6 +1,7 @@
 import Foundation
 
-/// Task attachments (read-only on iOS): list, paperclip index, signed download with a local cache.
+/// Task attachments: list, paperclip index, signed download with a local cache,
+/// plus photo upload/remove (used by social plans in the Lists tab).
 @MainActor
 final class AttachmentManager: ObservableObject {
     static let shared = AttachmentManager()
@@ -96,6 +97,65 @@ final class AttachmentManager: ObservableObject {
         while base.utf8.count > maxBase { base.removeLast() }
         if base.isEmpty || base == "." || base == ".." { base = "file" }
         return base + extPart
+    }
+
+    /// Uploads a JPEG photo to `<uid>/<taskId>/` and records it on the task.
+    func uploadPhoto(_ jpeg: Data, taskId: String) async throws -> TaskAttachment {
+        guard let userId = AuthManager.shared.currentUser?.id else { throw AttachmentError.failed }
+        let fileName = "photo-\(Self.photoStamp()).jpg"
+        let path = "\(userId.lowercased())/\(taskId.lowercased())/\(UUID().uuidString.lowercased())-\(fileName)"
+        guard let uploadURL = URL(string: "\(Config.supabaseURL)/storage/v1/object/\(bucket)/\(path)"),
+              let rowsURL = URL(string: "\(Config.supabaseURL)/rest/v1/task_attachments") else {
+            throw AttachmentError.failed
+        }
+
+        let (_, uploaded) = try await SupabaseRequest.send(
+            uploadURL, method: "POST", body: jpeg,
+            extraHeaders: ["Content-Type": "image/jpeg", "x-upsert": "false"]
+        )
+        guard uploaded.statusCode == 200 else { throw AttachmentError.failed }
+
+        let row: [String: Any] = [
+            "task_id": taskId, "user_id": userId, "file_name": fileName,
+            "mime_type": "image/jpeg", "size_bytes": jpeg.count, "storage_path": path,
+        ]
+        let (data, inserted) = try await SupabaseRequest.send(
+            rowsURL, method: "POST", json: row, extraHeaders: ["Prefer": "return=representation"]
+        )
+        guard inserted.statusCode == 201,
+              let attachment = try? JSONDecoder().decode([TaskAttachment].self, from: data).first else {
+            await removeObjects([path])  // don't leave an orphan object behind
+            throw AttachmentError.failed
+        }
+        taskIdsWithAttachments.insert(taskId)
+        return attachment
+    }
+
+    /// Removes one attachment: the stored file first, then its row (kept on failure so it can be retried).
+    func remove(_ attachment: TaskAttachment) async throws {
+        guard await removeObjects([attachment.storagePath]),
+              let url = URL(string: "\(Config.supabaseURL)/rest/v1/task_attachments?id=eq.\(attachment.id)") else {
+            throw AttachmentError.failed
+        }
+        let (_, http) = try await SupabaseRequest.send(url, method: "DELETE")
+        guard (200..<300).contains(http.statusCode) else { throw AttachmentError.failed }
+        try? FileManager.default.removeItem(at: cacheRoot.appendingPathComponent(attachment.id, isDirectory: true))
+    }
+
+    @discardableResult
+    private func removeObjects(_ paths: [String]) async -> Bool {
+        guard let url = URL(string: "\(Config.supabaseURL)/storage/v1/object/\(bucket)"),
+              let (_, http) = try? await SupabaseRequest.send(url, method: "DELETE", json: ["prefixes": paths]) else {
+            return false
+        }
+        return http.statusCode == 200
+    }
+
+    private static func photoStamp() -> String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyyMMdd-HHmmss"
+        return f.string(from: Date())
     }
 
     /// Clear in-memory index and cached files (sign-out).
