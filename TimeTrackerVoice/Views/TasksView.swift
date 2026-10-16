@@ -383,18 +383,20 @@ struct TasksView: View {
                 .foregroundStyle(NativePalette.muted)
                 .padding(.top, 4)
 
-            Button {
-                if let task = hero.task { setStatus(task, done: true) }
-            } label: {
-                Label(l10n.markDone, systemImage: "checkmark")
-                    .font(.system(size: 17, weight: .semibold))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-                    .foregroundStyle(NativePalette.accent)
-                    .background(NativePalette.accentSoft, in: Capsule())
+            if let task = hero.task {
+                Button {
+                    setStatus(task, done: true)
+                } label: {
+                    Label(l10n.markDone, systemImage: "checkmark")
+                        .font(.system(size: 17, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                        .foregroundStyle(NativePalette.accent)
+                        .background(NativePalette.accentSoft, in: Capsule())
+                }
+                .buttonStyle(.borderless)
+                .padding(.top, 20)
             }
-            .buttonStyle(.borderless)
-            .padding(.top, 20)
         }
         .padding(22)
         .background(NativePalette.surface, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
@@ -403,7 +405,10 @@ struct TasksView: View {
                 .strokeBorder(NativePalette.accentSoft, lineWidth: 1)
         )
         .contentShape(Rectangle())
-        .onTapGesture { openedTask = hero.task }
+        .onTapGesture {
+            if let task = hero.task { openedTask = task }
+            if let event = hero.calendarEvent { openedCalendarEvent = event }
+        }
     }
 
     private func progressBar(_ segments: [Bool]) -> some View {
@@ -536,7 +541,7 @@ struct TasksView: View {
         (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: weekStart) }
     }
 
-    /// Reminders first, then birthdays and events, then tasks by time (untimed last).
+    /// Reminders first, then birthdays and events, then tasks and timed meetings by time (untimed last).
     private func agendaItems(for date: Date) -> [AgendaItem] {
         let dateString = Self.isoDay.string(from: date)
         let dayTasks = taskManager.tasks.filter {
@@ -633,7 +638,7 @@ struct TasksView: View {
         let dateString = Self.isoDay.string(from: date)
         let hasItems = taskManager.tasks.contains {
             $0.date == dateString && $0.taskType != .idea && $0.taskType != .social
-        }
+        } || !calendarManager.events(on: date).isEmpty
         let hasOccasion = eventManager.hasEventOnDate(date) || !birthdayPeople(on: date).isEmpty
         return (hasItems, hasOccasion)
     }
@@ -713,14 +718,16 @@ private struct DayFocus {
 
     init(items: [AgendaItem], isToday: Bool, now: Date, calendar: Calendar) {
         let nowMinutes = calendar.component(.hour, from: now) * 60 + calendar.component(.minute, from: now)
-        let open = items.filter { !$0.isDone && !$0.isOccasion && $0.kind != .calendar }
+        let open = items.filter { !$0.isDone && !$0.isOccasion }
+        // Timed meetings compete for "Up next" with tasks, so the day stays in time order.
         let timedOpen = open.filter(\.hasTime)
 
         // Today: the first timed item that hasn't started more than 15 min ago.
         var hero = isToday
             ? timedOpen.first { ($0.startMinutes ?? 0) >= nowMinutes - 15 }
             : timedOpen.first
-        if hero == nil { hero = open.first }
+        // Nothing timed ahead: fall back to an open task or reminder, never a past or all-day meeting.
+        if hero == nil { hero = open.first { $0.kind != .calendar } }
         self.hero = hero
 
         if isToday, let start = hero?.startMinutes {
