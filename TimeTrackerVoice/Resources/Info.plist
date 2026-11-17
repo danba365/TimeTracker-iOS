@@ -50,6 +50,12 @@
 	<array>
 		<string>audio</string>
 	</array>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Fonts/Rubik-Variable.ttf</string>
+		<string>Fonts/Rubik-Regular.ttf</string>
+		<string>Fonts/Rubik-Medium.ttf</string>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>
